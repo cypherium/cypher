@@ -1,0 +1,62 @@
+{
+  "config": {
+    "chainId": 12367,
+    "committee":{
+      "0": {
+        "address": "192.168.1.211:7102",
+        "coinbase": "f9f71b2f0f8d0baf081c57101662568b7dfc7448",
+        "public": "a70cade8b060a4340523ae3c56a6b2d90f74978a4933bdf87dba46280230710b81e790a099e682b705ce9b8913146c0af76f65d5dcf7f9c1bd952330813ef796"
+      },
+      "1": {
+        "address": "192.168.1.211:7104",
+        "coinbase": "7dd2ccee3ae0a4c15668504a8b69725938c8e3d4",
+        "public": "c984cbfb4406816e53c051d65a7128654b3b1d497f09059bfd8fa778b2d4881c831a18f1c9766f189b583c6db53be40dd6ceda51569f1458734a993bd546930d"
+      },
+      "2": {
+        "address": "192.168.1.211:7106",
+        "coinbase": "f4185e7ca21f7d32aaa7c07cf83f55cc603bc28e",
+        "public": "d053fcaa2e514f7d5c83d7253d51d2e7c2ee9261e09b6660fff7639926691a256e54e40d738b1cd33618ad3680ebd283c4dd45ab765aa02c48dec82081484081"
+      },
+      "3": {
+        "address": "192.168.1.211:7108",
+        "coinbase": "74b1165077abe127a7c3069fc6a4b4a0b59edebc",
+        "public": "6a0b7807595a9122f68fc1c171e6adc108b4c6abbbac1e9e70ebe01376472325d35ee3310d15fc25a4f5803869273925d2b7d344cbbedd007c7afe2cdd5a388fs"
+      },
+      "4": {
+        "address": "192.168.1.211:7110",
+        "coinbase": "b7ca2a53946b3e474f8f2b8eed98116374b8161f",
+        "public": "fb89a3ca6156adf0ee1dea7d7b77537c246e49ff884ba3cacffc95a637da42151f69014cd321a9c8a7b301eb72738cb004450a70cc4b17872bf59ca245dc0102"
+      },
+      "5": {
+        "address": "192.168.1.211:7112",
+        "coinbase": "6cfbe84a7eeddc2bc3a28ffab139a877711460ff",
+        "public": "c9b5d880bbbd49f64315b7b54d57952765d12d97390368dfd54bc3ed71390a18f9c61ca7de4e17f3709316cb8ee0c6165643ddbeaa9ad65cfe447b89a65bde20"
+      },
+      "6": {
+        "address": "192.168.1.211:7114",
+        "coinbase": "8bb31af181038efc966cb80116bb0ae79e6ba530",
+        "public": "392f4fc12da60b61a1e6a79beb300501ac72ac9bd76817dade4bcdb70b2d2003baf00f81f4a5a5841120224f0510ce820e82936db47803fc8f59b265dc747b0a"
+      }
+    }
+  },
+  "alloc": {
+    "f9f71b2f0f8d0baf081c57101662568b7dfc7448": {
+      "balance": "1000000000000000000000000"
+    },
+    "4360da708fb0d5209627ac5dc09b0e10a6b45c4a": {
+      "balance": "1000000000000000000000000"
+    },
+    "d958521125d2ad73b7018018aa859fffba382570": {
+      "balance": "1000000000000000000000000"
+    },
+    "035c45516d62eeb6e6b5f2b18cdc78ea426e87cd": {
+      "balance": "1000000000000000000000000"
+    }
+  },
+  "difficulty" : "0x44C",
+  "gasLimit"   : "0xE0000000",
+  "nonce"      : "0x0",
+  "mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "timestamp"  : "0x00"
+}
