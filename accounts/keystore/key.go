@@ -183,6 +183,10 @@ func newED25519Key(rand io.Reader) (*Key, error) {
 		PrivateKey25519: privateKey,
 	}
 
+	kyberPubByte, _, err := crypto.EDDSAToBLS(privateKey)
+	if err == nil {
+		fmt.Printf("New BLS key pair, public key is %s\n\r", hex.EncodeToString(kyberPubByte))
+	}
 	return key, nil
 }
 

@@ -1,0 +1,94 @@
+{
+  "config": {
+    "chainId": 12127,
+    "committee":{
+      "0": {
+          "address": "119.8.149.6:7100",
+          "coinbase": "f9f71B2F0F8d0baF081C57101662568b7DfC7448",
+          "public": "a70cade8b060a4340523ae3c56a6b2d90f74978a4933bdf87dba46280230710b81e790a099e682b705ce9b8913146c0af76f65d5dcf7f9c1bd952330813ef796"
+        },
+      "1": {
+        "address": "119.8.154.146:7100",
+        "coinbase": "7dd2ccee3ae0a4c15668504a8b69725938c8e3d4",
+        "public": "c984cbfb4406816e53c051d65a7128654b3b1d497f09059bfd8fa778b2d4881c831a18f1c9766f189b583c6db53be40dd6ceda51569f1458734a993bd546930d"
+      },
+      "2": {
+        "address": "119.8.146.252:7100",
+        "coinbase": "f4185e7ca21f7d32aaa7c07cf83f55cc603bc28e",
+        "public": "d053fcaa2e514f7d5c83d7253d51d2e7c2ee9261e09b6660fff7639926691a256e54e40d738b1cd33618ad3680ebd283c4dd45ab765aa02c48dec82081484081"
+      },
+      "3": {
+        "address": "182.160.25.155:7100",
+        "coinbase": "74b1165077abe127a7c3069fc6a4b4a0b59edebc",
+        "public": "6a0b7807595a9122f68fc1c171e6adc108b4c6abbbac1e9e70ebe01376472325d35ee3310d15fc25a4f5803869273925d2b7d344cbbedd007c7afe2cdd5a388f"
+      },
+      "4": {
+        "address": "182.160.26.72:7100",
+        "coinbase": "b7ca2a53946b3e474f8f2b8eed98116374b8161f",
+        "public": "fb89a3ca6156adf0ee1dea7d7b77537c246e49ff884ba3cacffc95a637da42151f69014cd321a9c8a7b301eb72738cb004450a70cc4b17872bf59ca245dc0102"
+      },
+      "5": {
+        "address": "182.160.27.113:7100",
+        "coinbase": "6cfbe84a7eeddc2bc3a28ffab139a877711460ff",
+        "public": "c9b5d880bbbd49f64315b7b54d57952765d12d97390368dfd54bc3ed71390a18f9c61ca7de4e17f3709316cb8ee0c6165643ddbeaa9ad65cfe447b89a65bde20"
+      },
+      "6": {
+        "address": "119.8.155.201:7100",
+        "coinbase": "8bb31af181038efc966cb80116bb0ae79e6ba530",
+        "public": "392f4fc12da60b61a1e6a79beb300501ac72ac9bd76817dade4bcdb70b2d2003baf00f81f4a5a5841120224f0510ce820e82936db47803fc8f59b265dc747b0a"
+      },
+      "7": {
+        "address": "119.8.154.72:7100",
+        "coinbase": "3d5953f1E96d41B655485AB382aa6d7936B47543",
+        "public": "4aebfe95840c4fb82778ce74c7a4fbcfc5f787c4e72d02b6433d30189a63ff1e5573049e96ab71fcad13cb9589de561cc40608e0fa9f2315f3ff104d3d41ab0f"
+      }
+    }
+  },
+  "alloc": {
+    "f9f71B2F0F8d0baF081C57101662568b7DfC7448": {
+      "balance": "200000000000000000000000000000"
+    },
+    "592ffc305d3c78cadadb49166823ef8dddd16ed5": {
+      "balance": "200000000000000000000000000000"
+    },
+    "4360da708fb0d5209627ac5dc09b0e10a6b45c4a": {
+      "balance": "200000000000000000000000000000"
+    },
+    "7dd2ccee3ae0a4c15668504a8b69725938c8e3d4": {
+      "balance": "200000000000000000000000000000"
+    },
+    "9154feee927128a3e4c0bea6cc0098b96a89b7b5": {
+      "balance": "200000000000000000000000000000"
+    },
+    "50cd3d0f7f6f306dcd9c9e73ca8a5ab3839b0a69": {
+      "balance": "200000000000000000000000000000"
+    },
+    "f4185e7ca21f7d32aaa7c07cf83f55cc603bc28e": {
+      "balance": "200000000000000000000000000000"
+    },
+    "74b1165077abe127a7c3069fc6a4b4a0b59edebc": {
+      "balance": "200000000000000000000000000000"
+    },
+    "b7ca2a53946b3e474f8f2b8eed98116374b8161f": {
+      "balance": "200000000000000000000000000000"
+    },
+    "6cfbe84a7eeddc2bc3a28ffab139a877711460ff": {
+      "balance": "200000000000000000000000000000"
+    },
+    "8bb31af181038efc966cb80116bb0ae79e6ba530": {
+      "balance": "200000000000000000000000000000"
+    },
+    "3d5953f1E96d41B655485AB382aa6d7936B47543": {
+      "balance": "200000000000000000000000000000"
+    },
+    "a3bb4943741fab7e31f42f287e1c264bbe91641b": {
+      "balance": "200000000000000000000000000000"
+    }
+  },
+  "difficulty" : "0x44C",
+  "gasLimit"   : "0xE0000000",
+  "nonce"      : "0x0",
+  "mixHash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "timestamp"  : "0x00"
+}
