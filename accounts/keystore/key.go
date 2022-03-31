@@ -40,7 +40,8 @@ import (
 )
 
 const (
-	version = 3
+	oldversion = 3
+	version    = 4
 )
 
 type Key struct {
