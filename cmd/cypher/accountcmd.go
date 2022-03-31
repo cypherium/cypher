@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/cypherium/cypher/accounts/keystore"
 	"github.com/cypherium/cypher/cmd/utils"
 	"github.com/cypherium/cypher/common"
+	prompter "github.com/cypherium/cypher/console/prompt"
 	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/log"
 	cli "gopkg.in/urfave/cli.v1"
@@ -232,12 +234,44 @@ nodes.
 	}
 )
 
+// getPassPhrase retrieves the password associated with an account, either fetched
+// from a list of preloaded passphrases, or requested interactively from the user.
+func getPassPhrase(prompt string, confirmation bool, i int, passwords []string) string {
+	// If a list of passwords was supplied, retrieve from them
+	if len(passwords) > 0 {
+		if i < len(passwords) {
+			return passwords[i]
+		}
+		return passwords[len(passwords)-1]
+	}
+	// Otherwise prompt the user for the password
+	if prompt != "" {
+		fmt.Println(prompt)
+	}
+	password, err := prompter.Stdin.PromptPassword("Passphrase: ")
+	if err != nil {
+		utils.Fatalf("Failed to read passphrase: %v", err)
+	}
+	if confirmation {
+		confirm, err := prompter.Stdin.PromptPassword("Repeat passphrase: ")
+		if err != nil {
+			utils.Fatalf("Failed to read passphrase confirmation: %v", err)
+		}
+		if password != confirm {
+			utils.Fatalf("Passphrases do not match")
+		}
+	}
+	return password
+}
+
 func accountList(ctx *cli.Context) error {
 	stack, _ := makeConfigNode(ctx)
 	var index int
+	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 	for _, wallet := range stack.AccountManager().Wallets() {
 		for _, account := range wallet.Accounts() {
-			fmt.Printf("Account #%d: {%x} %s\n", index, account.Address, &account.URL)
+			pubKey, _, _ := wallet.GetKeyPair(account, password)
+			fmt.Printf("Account #%d: %x %s\n", index, account.Address, hex.EncodeToString(pubKey))
 			index++
 		}
 	}
