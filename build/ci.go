@@ -783,7 +783,7 @@ func doWindowsInstaller(cmdline []string) {
 	// first section contains the cypher binary, second section holds the dev tools.
 	templateData := map[string]interface{}{
 		"License":  "COPYING",
-		"Geth":     cypherTool,
+		"Cypher":   cypherTool,
 		"DevTools": devTools,
 	}
 	build.Render("build/nsis.cypher.nsi", filepath.Join(*workdir, "cypher.nsi"), 0644, nil)
@@ -984,8 +984,8 @@ func doXCodeFramework(cmdline []string) {
 	// Prepare and upload a PodSpec to CocoaPods
 	if *deploy != "" {
 		meta := newPodMetadata(env, archive)
-		build.Render("build/pod.podspec", "Geth.podspec", 0755, meta)
-		build.MustRunCommand("pod", *deploy, "push", "Geth.podspec", "--allow-warnings", "--verbose")
+		build.Render("build/pod.podspec", "Cypher.podspec", 0755, meta)
+		build.MustRunCommand("pod", *deploy, "push", "Cypher.podspec", "--allow-warnings", "--verbose")
 	}
 }
 
@@ -1085,7 +1085,6 @@ func xgoTool(args []string) *exec.Cmd {
 func doPurge(cmdline []string) {
 	var (
 		store = flag.String("store", "", `Destination from where to purge archives (usually "cypherstore/builds")`)
-		limit = flag.Int("days", 30, `Age threshold above which to delete unstable archives`)
 	)
 	flag.CommandLine.Parse(cmdline)
 
@@ -1112,20 +1111,21 @@ func doPurge(cmdline []string) {
 			i--
 		}
 	}
-	for i := 0; i < len(blobs); i++ {
-		for j := i + 1; j < len(blobs); j++ {
-			if blobs[i].Properties.LastModified.After(blobs[j].Properties.LastModified) {
-				blobs[i], blobs[j] = blobs[j], blobs[i]
-			}
-		}
-	}
+	//for i := 0; i < len(blobs); i++ {
+	//	for j := i + 1; j < len(blobs); j++ {
+	//		if blobs[i].Properties.LastModified.After(blobs[j].Properties.LastModified) {
+	//			blobs[i], blobs[j] = blobs[j], blobs[i]
+	//		}
+	//	}
+	//}
 	// Filter out all archives more recent that the given threshold
-	for i, blob := range blobs {
-		if time.Since(blob.Properties.LastModified) < time.Duration(*limit)*24*time.Hour {
-			blobs = blobs[:i]
-			break
-		}
-	}
+	//for i, blob := range blobs {
+	//	lastModified, _ := strconv.ParseInt(blob.Properties.LastModified, 10, 64)
+	//	if time.Since(big.NewInt(lastModified)) < time.Duration(*limit)*24*time.Hour {
+	//		blobs = blobs[:i]
+	//		break
+	//	}
+	//}
 	fmt.Printf("Deleting %d blobs\n", len(blobs))
 	// Delete all marked as such and return
 	if err := build.AzureBlobstoreDelete(auth, blobs); err != nil {
