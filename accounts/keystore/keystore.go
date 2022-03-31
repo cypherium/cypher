@@ -37,8 +37,7 @@ import (
 	"github.com/cypherium/cypher/core/types"
 	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/event"
-
-	//	"github.com/cypherium/cypher/log"
+	"github.com/cypherium/cypher/log"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -351,6 +350,9 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 	if err != nil {
 		return err
 	}
+
+	pubKey, _, _ := crypto.EDDSAToBLS(key.PrivateKey25519)
+	log.Info("Unlock", "address", a.Address, "public key", common.HexString(pubKey))
 
 	ks.mu.Lock()
 	defer ks.mu.Unlock()

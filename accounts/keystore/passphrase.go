@@ -265,7 +265,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 	}, nil
 }
 
-func DecryptDataV3(cryptoJson CryptoJSON, auth string, ver int) ([]byte, bool, error) {
+func DecryptDataV3(cryptoJson CryptoJSON, auth string) ([]byte, bool, error) {
 	isEd25519 := false
 	if cryptoJson.Cipher != "aes-128-ctr" {
 		if cryptoJson.Cipher == "ed25519-ctr" {
@@ -273,8 +273,10 @@ func DecryptDataV3(cryptoJson CryptoJSON, auth string, ver int) ([]byte, bool, e
 		} else {
 			return nil, false, fmt.Errorf("cipher not supported: %v", cryptoJson.Cipher)
 		}
-	} else if ver == oldversion { //for old keystore
-		isEd25519 = true
+	} else {
+		if len(cryptoJson.CipherText) == 128 { //for old keystore
+			isEd25519 = true
+		}
 	}
 
 	mac, err := hex.DecodeString(cryptoJson.MAC)
@@ -310,11 +312,11 @@ func DecryptDataV3(cryptoJson CryptoJSON, auth string, ver int) ([]byte, bool, e
 
 func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, keyId []byte, isEd25519 bool, err error) {
 
-	if keyProtected.Version != version && keyProtected.Version != oldversion {
+	if keyProtected.Version != version {
 		return nil, nil, false, fmt.Errorf("version not supported: %v", keyProtected.Version)
 	}
 	keyId = uuid.Parse(keyProtected.Id)
-	plainText, isEd25519, err := DecryptDataV3(keyProtected.Crypto, auth, keyProtected.Version)
+	plainText, isEd25519, err := DecryptDataV3(keyProtected.Crypto, auth)
 	if err != nil {
 		return nil, nil, isEd25519, err
 	}
