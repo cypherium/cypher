@@ -26,7 +26,6 @@ import (
 	"sync/atomic"
 	"time"
 
-
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/consensus"
 	"github.com/cypherium/cypher/core"
@@ -329,7 +328,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		td      = pm.blockchain.GetTd(hash, number)
 	)
 	if err := p.Handshake(pm.networkID, td, hash, genesis.Hash(), forkid.NewID(pm.blockchain), pm.forkFilter); err != nil {
-		p.Log().Debug("Ethereum handshake failed", "err", err)
+		p.Log().Trace("Ethereum handshake failed", "err", err)
 		return err
 	}
 
