@@ -535,7 +535,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getBlockByNumber',
 			call: 'eth_getBlockByNumber',
-			params: 2
+			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null],
 		}),
 		new web3._extend.Method({
