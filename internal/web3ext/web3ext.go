@@ -609,7 +609,7 @@ web3._extend({
 		}),
 		new web3._extend.Property({
 			name: 'keyBlockNumber',
-			getter: 'eth_keyBlockNumber'
+			getter: 'eth_keyBlockNumber',
             outputFormatter: web3._extend.utils.toDecimal
 		}),
 	]
