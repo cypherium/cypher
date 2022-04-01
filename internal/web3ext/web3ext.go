@@ -536,6 +536,7 @@ web3._extend({
 			name: 'getBlockByNumber',
 			call: 'eth_getBlockByNumber',
 			params: 2
+			inputFormatter: [web3c._extend.formatters.inputBlockNumberFormatter, null],
 		}),
 		new web3._extend.Method({
 			name: 'getBlockByHash',
@@ -546,6 +547,7 @@ web3._extend({
 			name: 'getKeyBlockByNumber',
 			call: 'eth_getKeyBlockByNumber',
 			params: 1,
+		    inputFormatter: [web3c._extend.formatters.inputBlockNumberFormatter],
 		}),
 		new web3._extend.Method({
 			name: 'getKeyBlockByHash',
@@ -608,6 +610,7 @@ web3._extend({
 		new web3._extend.Property({
 			name: 'keyBlockNumber',
 			getter: 'eth_keyBlockNumber'
+            outputFormatter: web3._extend.utils.toDecimal
 		}),
 	]
 });
