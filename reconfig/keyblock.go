@@ -128,7 +128,7 @@ func (keyS *keyService) verifyKeyBlock(keyblock *types.KeyBlock, bestCandi *type
 			return fmt.Errorf("keyblock verify failed, pow reconfig need the best candidate")
 		}
 		bestCandi.KeyCandidate.BlockType = keyType
-		log.Info("keyblock verify", "keyblock.Header", keyblock.Header(), "bestCandi.Header", bestCandi.KeyCandidate)
+		//log.Info("keyblock verify", "keyblock.Header", keyblock.Header(), "bestCandi.Header", bestCandi.KeyCandidate)
 		if keyblock.Header().HashWithCandi() != bestCandi.KeyCandidate.HashWithCandi() {
 			return fmt.Errorf("keyblock verify failed,best candidate's hash is not equal me")
 		}
@@ -319,6 +319,9 @@ func (keyS *keyService) getNextLeaderIndex(leaderIndex uint) uint {
 
 func (keyS *keyService) getBadAddress() string {
 	mb := bftview.GetCurrentMember()
+	if mb == nil {
+		return ""
+	}
 	cmLen := len(mb.List)
 	exps := make(map[int]int)
 
@@ -373,10 +376,10 @@ func (keyS *keyService) getBadAddress() string {
 }
 
 // Clear candidate in cache
-func (keyS *keyService) clearCandidate() {
+func (keyS *keyService) clearCandidate(keyblock *types.KeyBlock) {
 	keyS.muBestCandidate.Lock()
 	defer keyS.muBestCandidate.Unlock()
-
+	keyS.candidatepool.ClearObsolete(keyblock.Number())
 	keyS.bestCandidate = nil
 }
 
