@@ -1791,16 +1791,16 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 	if len(addresses) < 2 {
 		return
 	}
-
-	var (
-		headCh = make(chan core.ChainHeadEvent, 1)
-	)
-	sub := s.b.SubscribeChainHeadEvent(headCh)
-	if sub == nil {
-		return
-	}
-	defer sub.Unsubscribe()
-
+	/*
+		var (
+			headCh = make(chan core.ChainHeadEvent, 1)
+		)
+		sub := s.b.SubscribeChainHeadEvent(headCh)
+		if sub == nil {
+			return
+		}
+		defer sub.Unsubscribe()
+	*/
 	delayTm := time.Duration(delay) * time.Millisecond
 	s.autoTransactionRunning = true
 	atomic.StoreInt32(&s.quitAutoTransaction, 0)
@@ -1861,28 +1861,30 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 		}
 		log.Debug("AutoTrans...2")
 		time.Sleep(delayTm)
-		num := 0
+		/*
+			num := 0
 
-		for {
-			num++
-			if num > 1000 {
-				break
+			for {
+				num++
+				if num > 1000 {
+					break
+				}
+				hasNewBlock := false
+				pending, _ := s.b.Stats()
+				if pending == 0 {
+					break
+				}
+				select {
+				case head := <-headCh:
+					log.Debug("AutoTrans", "number", head.Block.NumberU64())
+					hasNewBlock = true
+				}
+				if hasNewBlock {
+					break
+				}
+				time.Sleep(delayTm)
 			}
-			hasNewBlock := false
-			pending, _ := s.b.Stats()
-			if pending == 0 {
-				break
-			}
-			select {
-			case head := <-headCh:
-				log.Debug("AutoTrans", "number", head.Block.NumberU64())
-				hasNewBlock = true
-			}
-			if hasNewBlock {
-				break
-			}
-			time.Sleep(delayTm)
-		}
+		*/
 	}
 
 	s.autoTransactionRunning = false
