@@ -211,7 +211,8 @@ type BlockChain struct {
 	shouldPreserve  func(*types.Block) bool        // Function used to determine whether should preserve the given block.
 	terminateInsert func(common.Hash, uint64) bool // Testing hook used to terminate ancient receipt chain insertion.
 
-	keyBlockChain *KeyBlockChain
+	keyBlockChain  *KeyBlockChain
+	ProcInsertDone func(*types.Block)
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -1572,19 +1573,21 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	bc.futureBlocks.Remove(block.Hash())
 
 	if status == CanonStatTy {
-
-		bc.chainFeed.Send(ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+		//bc.chainFeed.Send(ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
 		if len(logs) > 0 {
 			bc.logsFeed.Send(logs)
+		}
+		if bc.ProcInsertDone != nil {
+			bc.ProcInsertDone(block)
 		}
 		// In theory we should fire a ChainHeadEvent when we inject
 		// a canonical block, but sometimes we can insert a batch of
 		// canonicial blocks. Avoid firing too much ChainHeadEvents,
 		// we will fire an accumulated ChainHeadEvent and disable fire
 		// event here.
-		if emitHeadEvent {
-			bc.chainHeadFeed.Send(ChainHeadEvent{Block: block})
-		}
+		//if emitHeadEvent {
+		bc.chainHeadFeed.Send(ChainHeadEvent{Block: block})
+		//}
 	} else {
 		bc.chainSideFeed.Send(ChainSideEvent{Block: block})
 	}
@@ -1680,7 +1683,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 	// Fire a single chain head event if we've progressed the chain
 	defer func() {
 		if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
-			bc.chainHeadFeed.Send(ChainHeadEvent{lastCanon})
+			//?? bc.chainHeadFeed.Send(ChainHeadEvent{lastCanon})
 		}
 	}()
 	// Start the parallel header verifier
@@ -1889,7 +1892,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		storageHashTimer.Update(statedb.StorageHashes) // Storage hashes are complete, we can mark them
 
 		blockValidationTimer.Update(time.Since(substart) - (statedb.AccountHashes + statedb.StorageHashes - triehash))
-
 		// Write the block to the chain and get the status.
 		substart = time.Now()
 		status, err := bc.writeBlockWithState(block, receipts, logs, statedb, false)
@@ -1906,12 +1908,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		}
 		//------------------------------------------------------------------------------------------------
 		// Update the metrics touched during block commit
-		accountCommitTimer.Update(statedb.AccountCommits)   // Account commits are complete, we can mark them
-		storageCommitTimer.Update(statedb.StorageCommits)   // Storage commits are complete, we can mark them
-		snapshotCommitTimer.Update(statedb.SnapshotCommits) // Snapshot commits are complete, we can mark them
+		//accountCommitTimer.Update(statedb.AccountCommits)   // Account commits are complete, we can mark them
+		//storageCommitTimer.Update(statedb.StorageCommits)   // Storage commits are complete, we can mark them
+		//snapshotCommitTimer.Update(statedb.SnapshotCommits) // Snapshot commits are complete, we can mark them
 
-		blockWriteTimer.Update(time.Since(substart) - statedb.AccountCommits - statedb.StorageCommits - statedb.SnapshotCommits)
-		blockInsertTimer.UpdateSince(start)
+		//blockWriteTimer.Update(time.Since(substart) - statedb.AccountCommits - statedb.StorageCommits - statedb.SnapshotCommits)
+		//blockInsertTimer.UpdateSince(start)
 
 		switch status {
 		case CanonStatTy:
@@ -1945,6 +1947,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		dirty, _ := bc.stateCache.TrieDB().Size()
 		stats.report(chain, it.index, dirty)
 	}
+
 	// Any blocks remaining here? The only ones we care about are the future ones
 	if block != nil && errors.Is(err, consensus.ErrFutureBlock) {
 		if err := bc.addFutureBlock(block); err != nil {

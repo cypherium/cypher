@@ -139,7 +139,7 @@ func makeFullNode(ctx *cli.Context) (*node.Node, ethapi.Backend) {
 	backend, _ := utils.RegisterEthService(stack, &cfg.Eth)
 	// Add the Ethereum Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {
-		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
+		//utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
 	}
 	return stack, backend
 }

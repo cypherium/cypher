@@ -739,7 +739,7 @@ func (s *Service) procBlockDone(block *types.Block) {
 		s.updateCommittee(keyblock)
 		s.saveCommittee(keyblock)
 		s.updateCurrentView(block, keyblock, true)
-		s.keyService.clearCandidate()
+		s.keyService.clearCandidate(keyblock)
 	} else {
 		log.Info("@TxBlockDone", "number", block.NumberU64(), "keyhash", block.KeyHash())
 		s.updateCommittee(nil)
