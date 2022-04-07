@@ -52,21 +52,23 @@ type txService struct {
 
 func newTxService(s serviceI, backend *ReconfigBackend, config *params.ChainConfig) *txService {
 	txS := &txService{
-		s:              s,
-		cph:            backend,
-		bc:             backend.BlockChain(),
-		kbc:            backend.KeyBlockChain(),
-		txPool:         backend.TxPool(),
-		chainEventChan: make(chan core.ChainEvent, 20),
-		config:         config,
-		proposedChain:  newProposedChain(),
-		mux:            backend.EventMux(),
+		s:      s,
+		cph:    backend,
+		bc:     backend.BlockChain(),
+		kbc:    backend.KeyBlockChain(),
+		txPool: backend.TxPool(),
+		//		chainEventChan: make(chan core.ChainEvent, 1),
+		config:        config,
+		proposedChain: newProposedChain(),
+		mux:           backend.EventMux(),
 	}
 
-	txS.chainEventSub = backend.BlockChain().SubscribeChainEvent(txS.chainEventChan)
+	//	txS.chainEventSub = backend.BlockChain().SubscribeChainEvent(txS.chainEventChan)
 	txS.proposedChain.clear(txS.bc.CurrentBlock())
 
-	go txS.eventLoop()
+	txS.bc.ProcInsertDone = txS.procBlockDone
+
+	//go txS.eventLoop()
 
 	return txS
 }
@@ -213,6 +215,19 @@ func (txS *txService) decideNewBlock(block *types.Block, sig []byte, mask []byte
 }
 
 //-----------------------------------------------------------------------------------------------------
+func (txS *txService) procBlockDone(newBlock *types.Block) {
+	log.Info("chainBlockEvent...", "number", newBlock.NumberU64())
+	txS.txPool.RemoveBatch(newBlock.Transactions())
+
+	if txS.s.isRunning() {
+		txS.updateChainPerNewHead(newBlock)
+	} else {
+		txS.proposedChain.setHead(newBlock)
+	}
+
+	txS.s.procBlockDone(newBlock)
+
+}
 func (txS *txService) eventLoop() {
 	defer txS.chainEventSub.Unsubscribe()
 
@@ -229,9 +244,9 @@ func (txS *txService) eventLoop() {
 			}
 
 			txS.s.procBlockDone(newBlock)
-			if newBlock.BlockType() == types.Key_Block {
-				txS.txPool.ResetHead(newBlock.Header())
-			}
+			//if newBlock.BlockType() == types.Key_Block {
+			//	txS.txPool.ResetHead(newBlock.Header())
+			//}
 			//txS.txPool.RemoveBatch(newBlock.Transactions())
 
 		// system stopped
@@ -362,13 +377,13 @@ func (env *work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, g
 
 	var author *common.Address
 	var vmConf vm.Config
-	txnStart := time.Now()
 	publicReceipt, err := core.ApplyTransaction(env.config, bc, author, gp, env.publicState, env.header, tx, &env.header.GasUsed, vmConf)
 	if err != nil {
 		env.publicState.RevertToSnapshot(publicSnapshot)
 		return nil, err
 	}
-	log.EmitCheckpoint(log.TxCompleted, "tx", tx.Hash().Hex(), "time", time.Since(txnStart))
+	//txnStart := time.Now()
+	//log.EmitCheckpoint(log.TxCompleted, "tx", tx.Hash().Hex(), "time", time.Since(txnStart))
 
 	return publicReceipt, nil
 }

@@ -35,7 +35,6 @@ import (
 // the candidate's difficulty requirements.
 func (ethash *Ethash) SealCandidate(candidate *types.Candidate, stop <-chan struct{}) (*types.Candidate, error) {
 	log.Info("pow work,finding...", "PowMode", ethash.config.PowMode)
-	time.Sleep(200)
 	// If we're running a fake PoW, simply return a 0 nonce immediately
 	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
 		candidate.KeyCandidate.Nonce, candidate.KeyCandidate.MixDigest = types.BlockNonce{}, common.Hash{}

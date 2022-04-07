@@ -21,6 +21,7 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"sync/atomic"
 
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/core/types"
@@ -442,7 +443,7 @@ func (h *priceHeap) Pop() interface{} {
 type txPricedList struct {
 	all    *txLookup  // Pointer to the map of all transactions
 	items  *priceHeap // Heap of prices of all the stored transactions
-	stales int        // Number of stale price points to (re-heap trigger)
+	stales int64      // Number of stale price points to (re-heap trigger)
 }
 
 // newTxPricedList creates a new price-sorted transaction heap.
@@ -463,18 +464,18 @@ func (l *txPricedList) Put(tx *types.Transaction) {
 // the heap if a large enough ratio of transactions go stale.
 func (l *txPricedList) Removed(count int) {
 	// Bump the stale counter, but exit if still too low (< 25%)
-	l.stales += count
-	if l.stales <= len(*l.items)/4 {
+	stales := atomic.AddInt64(&l.stales, int64(count))
+	if stales <= int64(len(*l.items)/4) {
 		return
 	}
 	// Seems we've reached a critical number of stale transactions, reheap
 	reheap := make(priceHeap, 0, l.all.Count())
-
-	l.stales, l.items = 0, &reheap
-	l.all.Range(func(hash common.Hash, tx *types.Transaction) bool {
+	atomic.StoreInt64(&l.stales, 0)
+	l.items = &reheap
+	l.all.Range(func(hash common.Hash, tx *types.Transaction, local bool) bool {
 		*l.items = append(*l.items, tx)
 		return true
-	})
+	}, true, true)
 	heap.Init(l.items)
 }
 
@@ -520,7 +521,7 @@ func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) boo
 	for len(*l.items) > 0 {
 		head := []*types.Transaction(*l.items)[0]
 		if l.all.Get(head.Hash()) == nil {
-			l.stales--
+			atomic.AddInt64(&l.stales, -1)
 			heap.Pop(l.items)
 			continue
 		}

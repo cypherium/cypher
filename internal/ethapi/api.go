@@ -1793,7 +1793,7 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 	}
 	/*
 		var (
-			headCh = make(chan core.ChainHeadEvent, 1)
+			headCh = make(chan core.ChainHeadEvent)
 		)
 		sub := s.b.SubscribeChainHeadEvent(headCh)
 		if sub == nil {
@@ -1828,11 +1828,6 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 	labelReSend:
 		txNonce := noceMap[addrfrom]
 		noceMap[addrfrom]++
-		//if err != nil {
-		//	log.Error("AutoTrans Failed to get Nonce")
-		//	break
-		//}
-		//labelReSend:
 		log.Debug("AutoTrans", "fromIndex", fromIndex, "nonce", txNonce)
 		amount := 20000000000000000 //+ tmNow //balanceFrom.Uint64() / 1000
 		tx := types.NewTransaction(txNonce, addresses[toIndex], big.NewInt(int64(amount)), uint64(21000), big.NewInt(18100000000), []byte{})
@@ -1843,27 +1838,22 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 			break
 		}
 		log.Debug("AutoTrans...1")
-		hash, err := SubmitTransaction(ctx, s.b, signed, false)
+		hash, err := SubmitTransaction(ctx, s.b, signed, true)
 		if err != nil || hash == (common.Hash{}) { //&& err != core.ErrAlreadyKnown {
 			log.Error("AutoTrans failed to submit transaction", "amount", amount, "nonce", txNonce, "submit error", err)
 			//if err == core.ErrReplaceUnderpriced {
 			//	txNonce = txNonce + 1
-
+			time.Sleep(delayTm)
 			txNonce, _ = s.b.GetPoolNonce(ctx, addrfrom)
 			noceMap[addrfrom] = txNonce
 			goto labelReSend
 			//}
 			//break
-		} else {
-			//if !s.auoSendOK(ctx, hash) {
-			//	log.Debug("AutoTrans receipts failed!")
-			//}
 		}
 		log.Debug("AutoTrans...2")
 		time.Sleep(delayTm)
 		/*
 			num := 0
-
 			for {
 				num++
 				if num > 1000 {
@@ -1888,24 +1878,6 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 	}
 
 	s.autoTransactionRunning = false
-}
-
-func (s *PublicTransactionPoolAPI) auoSendOK(ctx context.Context, hash common.Hash) bool {
-	num := 0
-	for {
-		num++
-		if num > 10000 {
-			break
-		}
-		time.Sleep(200)
-		_, blockHash, _, index, err := s.b.GetTransaction(ctx, hash)
-		receipts, err := s.b.GetReceipts(ctx, blockHash)
-		if err != nil || len(receipts) <= int(index) {
-			continue
-		}
-		return true
-	}
-	return false
 }
 
 // AutoTransaction creates repeated transactions for the given argument, sign them and submit them to the

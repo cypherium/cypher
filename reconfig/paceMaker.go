@@ -24,7 +24,7 @@ import (
 
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/core/types"
-	"github.com/cypherium/cypher/event"
+//	"github.com/cypherium/cypher/event"
 	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/reconfig/bftview"
@@ -45,8 +45,8 @@ type paceMakerTimer struct {
 	kbc           *core.KeyBlockChain
 	mu            sync.Mutex
 
-	txsCh  chan core.NewTxsEvent
-	txsSub event.Subscription
+	//	txsCh  chan core.NewTxsEvent
+	//	txsSub event.Subscription
 }
 
 func newPaceMakerTimer(config *params.ChainConfig, s serviceI, backend *ReconfigBackend) *paceMakerTimer {
@@ -62,9 +62,9 @@ func newPaceMakerTimer(config *params.ChainConfig, s serviceI, backend *Reconfig
 		config:        config,
 	}
 
-	t.txsCh = make(chan core.NewTxsEvent, 1024)
-	t.txsSub = backend.TxPool().SubscribeNewTxsEvent(t.txsCh)
-	go t.txsEventLoop()
+	//	t.txsCh = make(chan core.NewTxsEvent, 128)
+	//	t.txsSub = backend.TxPool().SubscribeNewTxsEvent(t.txsCh)
+	//	go t.txsEventLoop()
 
 	go t.loopTimer()
 	return t
@@ -209,6 +209,7 @@ func (t *paceMakerTimer) procBlockDone(curBlock *types.Block, curKeyBlock *types
 
 }
 
+/*
 func (t *paceMakerTimer) txsEventLoop() {
 	for {
 		select {
@@ -230,3 +231,4 @@ func (t *paceMakerTimer) txsEventLoop() {
 		}
 	}
 }
+*/

@@ -8,7 +8,7 @@ if [ ! -f "build/env.sh" ]; then
 fi
 
 root="$PWD"
-cphdir="$GOPATH/src/github.com/cypherium/cypher"
+cphdir="$root/../cypher"
 
 # Run the command inside the workspace.
 cd "$cphdir"
