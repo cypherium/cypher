@@ -368,7 +368,7 @@ func NewTransactionsByPriceAndNonce(config *params.ChainConfig, blockNumber *big
 	heads := make(TxByPriceAndTime, 0, len(txs))
 	for from, accTxs := range txs {
 		Vb := accTxs[0].V()
-		if Vb.Cmp(big.NewInt(28)) <= 0 {
+		if Vb.Cmp(big.NewInt(28)) > 0 {
 			signer = MakeSignerRecover(config, blockNumber, Vb)
 		}
 		// Ensure the sender address is from the signer
