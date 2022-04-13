@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/cypherium/cypher/log"
 	"math/big"
 
 	"github.com/cypherium/cypher/common"
@@ -50,6 +51,22 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 		signer = FrontierSigner{}
 	}
 	return signer
+}
+
+// MakeSignerCypher returns a Signer based on the given chain config ,Transaction V, block number.
+func MakeSignerAutoJudgement(config *params.ChainConfig, blockNumber, Vb *big.Int) Signer {
+	var signer Signer
+	chainIdMul := new(big.Int).Mul(config.ChainID, big.NewInt(2))
+	V := new(big.Int).Sub(Vb, chainIdMul)
+	V.Sub(V, big8)
+	log.Info("MakeSignerAutoJudgement", "V", V.Uint64(), "ChainID", config.ChainID)
+	if V.Cmp(big.NewInt(28)) <= 0 {
+		signer = NewEIP155Signer(config.ChainID)
+		return signer
+	} else {
+		return MakeSigner(config, blockNumber)
+	}
+
 }
 
 // SignTx signs the transaction using the given signer and private key

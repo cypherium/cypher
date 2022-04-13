@@ -27,10 +27,9 @@ import (
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/common/hexutil"
 	"github.com/cypherium/cypher/crypto"
+	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/rlp"
-        "github.com/cypherium/cypher/log"
 )
-
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
 
@@ -181,6 +180,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 }
 
 func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) V() *big.Int        { return tx.data.V }
 func (tx *Transaction) Gas() uint64        { return tx.data.GasLimit }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) GasPriceCmp(other *Transaction) int {
