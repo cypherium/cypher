@@ -229,7 +229,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	txLookupCache, _ := lru.New(txLookupCacheLimit)
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(badBlockLimit)
-	log.Info("BlockChain.New")
+	log.Info("BlockChain New", "chain id", chainConfig.ChainID)
 
 	bc := &BlockChain{
 		chainConfig:    chainConfig,

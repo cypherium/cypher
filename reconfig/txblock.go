@@ -306,8 +306,7 @@ func (txS *txService) getTransactions() *types.TransactionsByPriceAndNonce {
 		panic(err)
 	}
 	addrTxes := txS.proposedChain.withoutProposedTxes(allAddrTxes)
-	signer := types.MakeSigner(txS.bc.Config(), txS.bc.CurrentBlock().Number())
-	return types.NewTransactionsByPriceAndNonce(signer, addrTxes)
+	return types.NewTransactionsByPriceAndNonce(txS.config, txS.bc.CurrentBlock().Number(), addrTxes)
 }
 
 // Sends-off events asynchronously.
