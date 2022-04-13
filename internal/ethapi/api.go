@@ -1696,18 +1696,18 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 
 // SubmitTransaction is a helper function that submits tx to txPool and logs a message.
 func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction, sync bool) (common.Hash, error) {
+	log.Info("SubmitTransaction", "tx chainid", tx.ChainId(), "tx ", tx.V())
 	// If the transaction fee cap is already specified, ensure the
 	// fee of the given transaction is _reasonable_.
 	if err := checkTxFee(tx.GasPrice(), tx.Gas(), b.RPCTxFeeCap()); err != nil {
 		return common.Hash{}, err
 	}
 	var signer types.Signer
-	signer = types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
+	signer = types.MakeSignerAutoJudgement(b.ChainConfig(), b.CurrentBlock().Number(), tx.V())
 	from, err := types.Sender(signer, tx)
 	if err != nil {
 		return common.Hash{}, err
 	}
-
 	if err := b.SendTx(ctx, tx, sync); err != nil {
 		return common.Hash{}, err
 	}
@@ -1904,6 +1904,7 @@ func (s *PublicTransactionPoolAPI) AutoTransaction(ctx context.Context, run int,
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
+	log.Info("SendRawTransaction")
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return common.Hash{}, err
