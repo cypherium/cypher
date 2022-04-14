@@ -91,11 +91,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
 func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *uint64, cfg vm.Config) (*types.Receipt, error) {
-	log.Info("ApplyTransaction 1")
 	msg, err := tx.AsMessage(types.MakeSignerAutoJudgement(config, header.Number, tx.V()))
 	if err != nil {
 		return nil, err
 	}
+	log.Info("ApplyTransaction 1", "msg.from", msg.From(), "msg.To()", msg.To())
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
 	// Create a new environment which holds all relevant information
