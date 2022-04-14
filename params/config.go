@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/crypto"
-	"github.com/cypherium/cypher/log"
 	"math/big"
 )
 
@@ -446,13 +445,11 @@ func (c *ChainConfig) IsEIP150(num *big.Int) bool {
 
 // IsEIP155 returns whether num is either equal to the EIP155 fork block or greater.
 func (c *ChainConfig) IsEIP155(num *big.Int) bool {
-	log.Info("IsEIP155", "EIP155Block", c.EIP155Block)
 	return isForked(c.EIP155Block, num)
 }
 
 // IsEIP158 returns whether num is either equal to the EIP158 fork block or greater.
 func (c *ChainConfig) IsEIP158(num *big.Int) bool {
-	log.Info("IsEIP158", "EIP158Block", c.EIP158Block)
 	return isForked(c.EIP158Block, num)
 }
 

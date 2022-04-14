@@ -95,7 +95,7 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if err != nil {
 		return nil, err
 	}
-	log.Info("ApplyTransaction 1", "msg.from", msg.From(), "msg.To()", msg.To())
+	log.Info("ApplyTransaction", "msg.from", msg.From(), "msg.To()", msg.To())
 	// Create a new context to be used in the EVM environment
 	context := NewEVMContext(msg, header, bc, author)
 	// Create a new environment which holds all relevant information
@@ -106,7 +106,6 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	if err != nil {
 		return nil, err
 	}
-	log.Info("ApplyTransaction 2")
 	// Update the state with pending changes
 	var root []byte
 	if config.IsByzantium(header.Number) {
@@ -131,6 +130,5 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 	receipt.BlockHash = statedb.BlockHash()
 	receipt.BlockNumber = header.Number
 	receipt.TransactionIndex = uint(statedb.TxIndex())
-	log.Info("ApplyTransaction", "receipt", receipt)
 	return receipt, err
 }
