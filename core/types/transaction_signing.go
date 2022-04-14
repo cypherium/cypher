@@ -56,9 +56,10 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 // MakeSignerCypher returns a Signer based on the given chain config ,Transaction V, block number.
 func MakeSignerAutoJudgement(config *params.ChainConfig, blockNumber *big.Int, Vb *big.Int) Signer {
 	var signer Signer
-	signer = MakeSigner(config, blockNumber)
 	if Vb.Cmp(big.NewInt(28)) > 0 {
 		signer = MakeSignerRecover(config, blockNumber, Vb)
+	} else {
+		signer = MakeSigner(config, blockNumber)
 	}
 	return signer
 }

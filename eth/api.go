@@ -79,6 +79,33 @@ func (api *PublicEthereumAPI) ChainId() hexutil.Uint64 {
 	return (hexutil.Uint64)(chainID.Uint64())
 }
 
+func (api *PublicEthereumAPI) Status() string {
+	var s string
+	i := bftview.IamMember()
+
+	if i >= 0 {
+		if i == 0 {
+			s = "I'm leader."
+		} else {
+			s = "I'm committee member."
+		}
+	} else {
+		s += "I'm common node."
+
+	}
+	if api.e.IsMining() {
+		s += "is Running."
+	} else {
+		s += "Stopped."
+	}
+	if api.e.ServiceIsRunning() {
+		s += "&& in service."
+	} else {
+		s += "&& not in service."
+	}
+	return s
+}
+
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.
 type PublicMinerAPI struct {

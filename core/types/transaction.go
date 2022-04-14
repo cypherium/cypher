@@ -363,14 +363,10 @@ type TransactionsByPriceAndNonce struct {
 // if after providing it to the constructor.
 func NewTransactionsByPriceAndNonce(config *params.ChainConfig, blockNumber *big.Int, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	var signer Signer
-	signer = MakeSigner(config, blockNumber)
 	// Initialize a price and received time based heap with the head transactions
 	heads := make(TxByPriceAndTime, 0, len(txs))
 	for from, accTxs := range txs {
-		Vb := accTxs[0].V()
-		if Vb.Cmp(big.NewInt(28)) > 0 {
-			signer = MakeSignerRecover(config, blockNumber, Vb)
-		}
+		signer = MakeSignerAutoJudgement(config, blockNumber, accTxs[0].V())
 		// Ensure the sender address is from the signer
 		acc, err := Sender(signer, accTxs[0])
 		if err == nil {
