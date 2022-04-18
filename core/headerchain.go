@@ -70,13 +70,14 @@ type HeaderChain struct {
 
 	procInterrupt func() bool
 
-	rand   *mrand.Rand
-	engine consensus.Engine
+	rand          *mrand.Rand
+	engine        consensus.Engine
+	keyBlockChain *KeyBlockChain
 }
 
 // NewHeaderChain creates a new HeaderChain structure. ProcInterrupt points
 // to the parent's interrupt semaphore.
-func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
+func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool, kbc *KeyBlockChain) (*HeaderChain, error) {
 	headerCache, _ := lru.New(headerCacheLimit)
 	tdCache, _ := lru.New(tdCacheLimit)
 	numberCache, _ := lru.New(numberCacheLimit)
@@ -96,6 +97,7 @@ func NewHeaderChain(chainDb ethdb.Database, config *params.ChainConfig, engine c
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
 		engine:        engine,
+		keyBlockChain: kbc,
 	}
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
@@ -594,4 +596,8 @@ func (hc *HeaderChain) Engine() consensus.Engine { return hc.engine }
 // a header chain does not have blocks available for retrieval.
 func (hc *HeaderChain) GetBlock(hash common.Hash, number uint64) *types.Block {
 	return nil
+}
+
+func (hc *HeaderChain) GetKeyChainReader() types.KeyChainReader {
+	return hc.keyBlockChain
 }

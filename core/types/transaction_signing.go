@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/cypherium/cypher/log"
 	"math/big"
 
 	"github.com/cypherium/cypher/common"
@@ -50,6 +51,33 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 		signer = FrontierSigner{}
 	}
 	return signer
+}
+
+// MakeSignerCypher returns a Signer based on the given chain config ,Transaction V, block number.
+func MakeSignerAutoJudgement(config *params.ChainConfig, blockNumber *big.Int, Vb *big.Int) Signer {
+	var signer Signer
+	if Vb.Cmp(big.NewInt(28)) > 0 {
+		signer = MakeSignerRecover(config, blockNumber, Vb)
+	} else {
+		signer = MakeSigner(config, blockNumber)
+	}
+	return signer
+}
+
+// MakeSignerRecover returns a Signer based on the given chain config ,Transaction V, block number.
+func MakeSignerRecover(config *params.ChainConfig, blockNumber, Vb *big.Int) Signer {
+	var signer Signer
+	chainIdMul := new(big.Int).Mul(config.ChainID, big.NewInt(2))
+	V := new(big.Int).Sub(Vb, chainIdMul)
+	V.Sub(V, big8)
+	log.Info("MakeSignerRecover", "V", V.Uint64(), "ChainID", config.ChainID)
+	if V.Cmp(big.NewInt(28)) <= 0 {
+		signer = NewEIP155Signer(config.ChainID)
+		return signer
+	} else {
+		return MakeSigner(config, blockNumber)
+	}
+
 }
 
 // SignTx signs the transaction using the given signer and private key
@@ -219,11 +247,53 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 	return recoverPlain(fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
 }
 
+func (fs FrontierSigner) SenderWithChainId(tx *Transaction, id *big.Int) (common.Address, error) {
+	return recoverPlain(fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
+}
+
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
 	if Vb.BitLen() > 8 {
 		return common.Address{}, ErrInvalidSig
 	}
 	V := byte(Vb.Uint64() - 27)
+	if !crypto.ValidateSignatureValues(V, R, S, homestead) {
+		return common.Address{}, ErrInvalidSig
+	}
+	// encode the signature in uncompressed format
+	r, s := R.Bytes(), S.Bytes()
+	sig := make([]byte, crypto.SignatureLength)
+	copy(sig[32-len(r):32], r)
+	copy(sig[64-len(s):64], s)
+	sig[64] = V
+	// recover the public key from the signature
+	pub, err := crypto.Ecrecover(sighash[:], sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	if len(pub) == 0 || pub[0] != 4 {
+		return common.Address{}, errors.New("invalid public key")
+	}
+	var addr common.Address
+	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
+	return addr, nil
+}
+
+func recoverPlainWithChanId(sighash common.Hash, R, S, Vb *big.Int, homestead bool, id *big.Int) (common.Address, error) {
+	if Vb.BitLen() > 8 {
+		return common.Address{}, ErrInvalidSig
+	}
+	Vd := big.NewInt(0)
+	V := byte(0)
+	if Vb.Cmp(big.NewInt(28)) > 0 {
+		chainIdMul := new(big.Int).Mul(id, big.NewInt(2))
+		Vd = new(big.Int).Sub(Vb, chainIdMul)
+		Vd.Sub(Vb, big8)
+		if Vd.Cmp(big.NewInt(28)) > 0 {
+			return common.Address{}, ErrInvalidV
+		}
+	}
+
+	V = byte(Vb.Uint64() - 27)
 	if !crypto.ValidateSignatureValues(V, R, S, homestead) {
 		return common.Address{}, ErrInvalidSig
 	}

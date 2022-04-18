@@ -20,10 +20,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/big"
-
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/crypto"
+	"math/big"
 )
 
 // Genesis hashes to enforce below configs on.

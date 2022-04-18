@@ -1702,7 +1702,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction, sy
 		return common.Hash{}, err
 	}
 	var signer types.Signer
-	signer = types.MakeSigner(b.ChainConfig(), b.CurrentBlock().Number())
+	signer = types.MakeSignerAutoJudgement(b.ChainConfig(), b.CurrentBlock().Number(), tx.V())
 	from, err := types.Sender(signer, tx)
 	if err != nil {
 		return common.Hash{}, err

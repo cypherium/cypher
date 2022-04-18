@@ -75,11 +75,35 @@ func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
 
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
 func (api *PublicEthereumAPI) ChainId() hexutil.Uint64 {
-	chainID := new(big.Int)
-	if config := api.e.blockchain.Config(); config.IsEIP155(api.e.blockchain.CurrentBlock().Number()) {
-		chainID = config.ChainID
-	}
+	chainID := api.e.blockchain.Config().ChainID
 	return (hexutil.Uint64)(chainID.Uint64())
+}
+
+func (api *PublicEthereumAPI) Status() string {
+	var s string
+	i := bftview.IamMember()
+
+	if i >= 0 {
+		if i == 0 {
+			s = "I'm leader."
+		} else {
+			s = "I'm committee member."
+		}
+	} else {
+		s += "I'm common node."
+
+	}
+	if api.e.IsMining() {
+		s += "is Running."
+	} else {
+		s += "Stopped."
+	}
+	if api.e.ServiceIsRunning() {
+		s += "&& in service."
+	} else {
+		s += "&& not in service."
+	}
+	return s
 }
 
 // PublicMinerAPI provides an API to control the miner.

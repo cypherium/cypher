@@ -229,7 +229,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	txLookupCache, _ := lru.New(txLookupCacheLimit)
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 	badBlocks, _ := lru.New(badBlockLimit)
-	log.Info("BlockChain.New")
+	log.Info("BlockChain New", "chain id", chainConfig.ChainID)
 
 	bc := &BlockChain{
 		chainConfig:    chainConfig,
@@ -255,7 +255,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	bc.processor = NewStateProcessor(chainConfig, bc, engine)
 
 	var err error
-	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.insertStopped)
+	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.insertStopped, kbc)
 	if err != nil {
 		return nil, err
 	}

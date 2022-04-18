@@ -31,10 +31,10 @@ import (
 	"github.com/cypherium/cypher/consensus"
 	"github.com/cypherium/cypher/core/state"
 	"github.com/cypherium/cypher/core/types"
-	"github.com/cypherium/cypher/core/vm"
 	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/reconfig/bftview"
+	"github.com/cypherium/cypher/reconfig/hotstuff"
 	"github.com/cypherium/cypher/trie"
 	//set "gopkg.in/fatih/set.v0"
 )
@@ -436,7 +436,7 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 // setting the final state on the header
 func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, totalGas uint64) {
 	// Accumulate any block and uncle rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header, uncles)
+	accumulateRewards(chain, state, header, uncles, totalGas)
 
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
@@ -444,8 +444,12 @@ func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.
 // FinalizeAndAssemble implements consensus.Engine, accumulating the block and
 // uncle rewards, setting the final state and assembling the block.
 func (ethash *Ethash) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	var totalGas uint64
+	for i, tx := range txs {
+		totalGas += receipts[i].GasUsed * tx.GasPrice().Uint64()
+	}
 	// Accumulate any block and uncle rewards and commit the final state root
-	accumulateRewards(chain.Config(), state, header, uncles)
+	accumulateRewards(chain, state, header, uncles, totalGas)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
 	// Header seems complete, assemble into a block and return
@@ -502,51 +506,28 @@ func calcDifficultyFrontier(time uint64, parent *types.Header) *big.Int {
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
-func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
-	// Select the correct block reward based on chain progression
-	blockReward := FrontierBlockReward
-	// Accumulate the rewards for the miner and any included uncles
-	reward := new(big.Int).Set(blockReward)
-	r := new(big.Int)
-	for _, uncle := range uncles {
-		r.Add(uncle.Number, big8)
-		r.Sub(r, header.Number)
-		r.Mul(r, blockReward)
-		r.Div(r, big8)
-		state.AddBalance(uncle.Coinbase, r)
-
-		r.Div(blockReward, big32)
-		reward.Add(reward, r)
-	}
-	state.AddBalance(header.Coinbase, reward)
-}
-
-// wrapper for accumulateRewards to be called by raft minter
-func AccumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
-	accumulateRewards(config, state, header, uncles)
-}
-
-func RewardCommites(bc types.ChainReader, state vm.StateDB, header *types.Header, blockReward uint64, beNewVer bool) {
-	bRewardAll := false
-	//if header.BlockType == types.IsKeyBlockType {
-	//		bRewardAll = true
-	//}
+func accumulateRewards(bc consensus.ChainHeaderReader, state *state.StateDB, header *types.Header, uncles []*types.Header, blockReward uint64) {
 	//log.Info("RewardCommites", "blockReward", blockReward)
 	if blockReward == 0 {
 		return
 	}
-	pBlock := bc.GetBlock(header.ParentHash, header.Number.Uint64()-1)
-	if pBlock == nil {
+	beNewVer := false
+	if header.Number.Uint64() > params.ForkFeeBlock {
+		beNewVer = true
+	}
+
+	pHeader := bc.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	if pHeader == nil {
 		log.Error("RewardCommites", "not found parent header hash", header.ParentHash)
 		return
 	}
-
-	keyHash := pBlock.KeyHash()
-	if !beNewVer && header.KeyHash != keyHash {
-		kheader := bc.GetKeyChainReader().GetHeaderByHash(header.KeyHash)
+	kbc := bc.GetKeyChainReader()
+	keyHash := pHeader.KeyHash
+	if !beNewVer && header.KeyHash != pHeader.KeyHash {
+		kheader := kbc.GetHeaderByHash(header.KeyHash)
 		if kheader.HasNewNode() {
 			kNumber := kheader.NumberU64()
-			cnodes := bc.GetKeyChainReader().GetCommitteeByNumber(kNumber)
+			cnodes := kbc.GetCommitteeByNumber(kNumber)
 			if cnodes == nil {
 				log.Error("RewardCommites", "not found committee keyNumber", kNumber)
 				return
@@ -556,46 +537,38 @@ func RewardCommites(bc types.ChainReader, state vm.StateDB, header *types.Header
 		}
 	}
 
-	kheader := bc.GetKeyChainReader().GetHeaderByHash(keyHash)
+	kheader := kbc.GetHeaderByHash(pHeader.KeyHash)
 	if kheader == nil {
-		log.Error("RewardCommites", "not found key hash", keyHash)
+		log.Error("RewardCommites", "not found key hash", pHeader.KeyHash)
 		return
 	}
 	kNumber := kheader.NumberU64()
-	cnodes := bc.GetKeyChainReader().GetCommitteeByNumber(kNumber)
+	cnodes := kbc.GetCommitteeByNumber(kNumber)
 	if cnodes == nil {
 		log.Error("RewardCommites", "not found committee keyNumber", kNumber)
 		return
 	}
 	var addresses []common.Address
-	if bRewardAll {
-		for _, r := range cnodes {
-			addresses = append(addresses, common.HexToAddress(r.CoinBase))
-		}
-	} else {
-		/*??
-		mycommittee := &bftview.Committee{List: cnodes}
-		pubs := mycommittee.ToBlsPublicKeys(keyHash)
-		exceptions := hotstuff.MaskToException(pBlock.Exceptions(), pubs, beNewVer)
-		for i, pub := range pubs {
-			isException := false
-			for _, exp := range exceptions {
-				if exp.IsEqual(pub) {
-					isException = true
-					break
-				}
+	mycommittee := &bftview.Committee{List: cnodes}
+	pubs := mycommittee.ToBlsPublicKeys(keyHash)
+	exceptions := hotstuff.MaskToException(pHeader.SignInfo.Exceptions, pubs, beNewVer)
+	for i, pub := range pubs {
+		isException := false
+		for _, exp := range exceptions {
+			if exp.IsEqual(pub) {
+				isException = true
+				break
 			}
+		}
 
-			if !isException {
-				//address := crypto.PubKeyToAddressCypherium(publicKey)
-				addr := mycommittee.List[i].CoinBase
-				//log.Info("Rewards", "address", addr)
-				//if len(addr) > 16 {
-				addresses = append(addresses, common.HexToAddress(addr))
-				//}
-			}
+		if !isException {
+			//address := crypto.PubKeyToAddressCypherium(publicKey)
+			addr := mycommittee.List[i].CoinBase
+			//log.Info("Rewards", "address", addr)
+			//if len(addr) > 16 {
+			addresses = append(addresses, common.HexToAddress(addr))
+			//}
 		}
-		*/
 	}
 	n := len(addresses)
 	if n < 4 {
@@ -616,4 +589,9 @@ func RewardCommites(bc types.ChainReader, state vm.StateDB, header *types.Header
 			state.AddBalance(addresses[i], bigAverage)
 		}
 	}
+}
+
+// wrapper for accumulateRewards to be called by raft minter
+func AccumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, header *types.Header, uncles []*types.Header, totalGas uint64) {
+	accumulateRewards(chain, state, header, uncles, totalGas)
 }

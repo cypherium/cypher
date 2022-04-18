@@ -81,7 +81,7 @@ func (txS *txService) tryProposalNewKeyBlock(keyblock *types.KeyBlock) ([]byte, 
 
 	header := work.header
 	// commit state root after all state transitions.
-	ethash.AccumulateRewards(txS.bc.Config(), work.publicState, header, nil)
+	ethash.AccumulateRewards(txS.bc, work.publicState, header, nil, 0)
 	header.Root = work.publicState.IntermediateRoot(false)
 
 	header.BlockType = types.Key_Block
@@ -118,8 +118,12 @@ func (txS *txService) tryProposalNewBlock(blockType uint8) ([]byte, error) {
 
 	header := work.header
 
+	var totalGas uint64
+	for i, tx := range committedTxes {
+		totalGas += publicReceipts[i].GasUsed * tx.GasPrice().Uint64()
+	}
 	// commit state root after all state transitions.
-	ethash.AccumulateRewards(txS.bc.Config(), work.publicState, header, nil)
+	ethash.AccumulateRewards(txS.bc, work.publicState, header, nil, totalGas)
 	header.Root = work.publicState.IntermediateRoot(false)
 	header.KeyHash = txS.kbc.CurrentBlock().Hash()
 

@@ -27,15 +27,16 @@ import (
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/common/hexutil"
 	"github.com/cypherium/cypher/crypto"
+	"github.com/cypherium/cypher/log"
+	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rlp"
-        "github.com/cypherium/cypher/log"
 )
-
 
 //go:generate gencodec -type txdata -field-override txdataMarshaling -out gen_tx_json.go
 
 var (
 	ErrInvalidSig = errors.New("invalid transaction v, r, s values")
+	ErrInvalidV   = errors.New("invalid transaction v")
 )
 
 type Transaction struct {
@@ -181,6 +182,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 }
 
 func (tx *Transaction) Data() []byte       { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) V() *big.Int        { return tx.data.V }
 func (tx *Transaction) Gas() uint64        { return tx.data.GasLimit }
 func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) GasPriceCmp(other *Transaction) int {
@@ -359,10 +361,12 @@ type TransactionsByPriceAndNonce struct {
 //
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
-func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
+func NewTransactionsByPriceAndNonce(config *params.ChainConfig, blockNumber *big.Int, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
+	var signer Signer
 	// Initialize a price and received time based heap with the head transactions
 	heads := make(TxByPriceAndTime, 0, len(txs))
 	for from, accTxs := range txs {
+		signer = MakeSignerAutoJudgement(config, blockNumber, accTxs[0].V())
 		// Ensure the sender address is from the signer
 		acc, err := Sender(signer, accTxs[0])
 		if err == nil {
