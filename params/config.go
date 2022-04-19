@@ -102,11 +102,11 @@ var (
 		EIP150Hash:          common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d"),
 		EIP155Block:         big.NewInt(10),
 		EIP158Block:         big.NewInt(10),
-		ByzantiumBlock:      big.NewInt(1700000),
-		ConstantinopleBlock: big.NewInt(4230000),
-		PetersburgBlock:     big.NewInt(4939394),
-		IstanbulBlock:       big.NewInt(6485846),
-		MuirGlacierBlock:    big.NewInt(7117117),
+		ByzantiumBlock:      big.NewInt(170),
+		ConstantinopleBlock: big.NewInt(423),
+		PetersburgBlock:     big.NewInt(493),
+		IstanbulBlock:       big.NewInt(648),
+		MuirGlacierBlock:    big.NewInt(711),
 		Ethash:              new(EthashConfig),
 	}
 
@@ -184,7 +184,7 @@ var (
 		ByzantiumBlock:      big.NewInt(0),
 		ConstantinopleBlock: big.NewInt(0),
 		PetersburgBlock:     big.NewInt(0),
-		IstanbulBlock:       big.NewInt(1561651),
+		IstanbulBlock:       big.NewInt(156),
 		MuirGlacierBlock:    nil,
 		Clique: &CliqueConfig{
 			Period: 15,
