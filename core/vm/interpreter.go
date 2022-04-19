@@ -93,6 +93,7 @@ type EVMInterpreter struct {
 
 // NewEVMInterpreter returns a new instance of the Interpreter.
 func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
+	log.Info("NewEVMInterpreter")
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
@@ -114,7 +115,8 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 		case evm.chainRules.IsHomestead:
 			jt = homesteadInstructionSet
 		default:
-			jt = frontierInstructionSet
+			jt = spuriousDragonInstructionSet
+			log.Info("spuriousDragonInstructionSet default ")
 		}
 		for i, eip := range cfg.ExtraEips {
 			if err := EnableEIP(eip, &jt); err != nil {
