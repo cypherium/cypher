@@ -134,11 +134,11 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
-	chainConfig, genesisHash, genesisErr := core.SetupGenesisKeyBlock(chainDb, config.GenesisKey)
+	_, _, genesisErr := core.SetupGenesisKeyBlock(chainDb, config.GenesisKey)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-	chainConfig, genesisHash, genesisErr = core.SetupGenesisBlock(chainDb, config.Genesis)
+	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
@@ -169,7 +169,7 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		bloomIndexer:                    NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 		p2pServer:                       stack.Server(),
 		consensusServicePendingLogsFeed: new(event.Feed),
-		extIP: extIP,
+		extIP:                           extIP,
 	}
 
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
