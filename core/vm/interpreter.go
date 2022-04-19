@@ -115,8 +115,8 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 		case evm.chainRules.IsHomestead:
 			jt = homesteadInstructionSet
 		default:
-			jt = spuriousDragonInstructionSet
-			log.Info("spuriousDragonInstructionSet default ")
+			jt = frontierInstructionSet
+			log.Info("frontierInstructionSet default ")
 		}
 		for i, eip := range cfg.ExtraEips {
 			if err := EnableEIP(eip, &jt); err != nil {
