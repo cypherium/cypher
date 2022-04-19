@@ -101,18 +101,26 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 		var jt JumpTable
 		switch {
 		case evm.chainRules.IsYoloV1:
+			log.Info("IsYoloV1")
 			jt = yoloV1InstructionSet
 		case evm.chainRules.IsIstanbul:
+			log.Info("IsIstanbul")
 			jt = istanbulInstructionSet
 		case evm.chainRules.IsConstantinople:
+			log.Info("IsConstantinople")
 			jt = constantinopleInstructionSet
 		case evm.chainRules.IsByzantium:
+			log.Info("IsByzantium")
 			jt = byzantiumInstructionSet
 		case evm.chainRules.IsEIP158:
+			log.Info("IsEIP158")
 			jt = spuriousDragonInstructionSet
+			log.Info("spuriousDragonInstructionSet")
 		case evm.chainRules.IsEIP150:
+			log.Info("IsEIP150")
 			jt = tangerineWhistleInstructionSet
 		case evm.chainRules.IsHomestead:
+			log.Info("IsHomestead")
 			jt = homesteadInstructionSet
 		default:
 			jt = frontierInstructionSet
