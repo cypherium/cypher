@@ -160,8 +160,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 	stored := rawdb.ReadCanonicalHash(db, 0)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
-			log.Info("Writing default main-net genesis block")
-			genesis = DefaultGenesisBlock()
+			panic("Writing genesis key block error!")
 		} else {
 			log.Info("Writing custom genesis block")
 		}
@@ -181,6 +180,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		if err != nil {
 			return genesis.Config, common.Hash{}, err
 		}
+		log.Info("SetupGenesisTxBlock", "block.Hash()", block.Hash(), "genesis.Config", genesis.Config)
 		return genesis.Config, block.Hash(), nil
 	}
 
@@ -422,7 +422,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
 			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
-			faucet: {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }
