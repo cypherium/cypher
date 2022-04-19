@@ -1638,7 +1638,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	switch {
 	case ctx.GlobalBool(LegacyTestnetFlag.Name) || ctx.GlobalBool(RopstenFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
+			cfg.NetworkId = 12127
 		}
 		cfg.Genesis = core.DefaultRopstenGenesisBlock()
 		setDNSDiscoveryDefaults(cfg, params.RopstenGenesisHash)
@@ -1706,7 +1706,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.Miner.GasPrice = big.NewInt(1)
 		}
 	default:
-		if cfg.NetworkId == 12127 {
+		if cfg.NetworkId == 16162 {
 			setDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
 		}
 	}
