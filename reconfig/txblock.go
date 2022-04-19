@@ -286,7 +286,7 @@ func (txS *txService) createWork() *work {
 		Coinbase:   bftview.GetServerCoinBase(),
 		Time:       uint64(tstamp),
 	}
-
+	log.Info("createWork", "GasLimit", header.GasLimit)
 	publicState, err := txS.bc.StateAt(parent.Root())
 	if err != nil {
 		panic(fmt.Sprint("failed to get parent state: ", err))

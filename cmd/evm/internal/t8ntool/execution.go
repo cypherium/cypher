@@ -122,6 +122,7 @@ func (pre *Prestate) Apply(vmConfig vm.Config, chainConfig *params.ChainConfig,
 		GetHash:     getHash,
 		// GasPrice and Origin needs to be set per transaction
 	}
+	log.Info("Apply", "GasLimit", vmContext.GasLimit)
 	// If DAO is supported/enabled, we need to handle it here. In cypher 'proper', it's
 	// done in StateProcessor.Process(block, ...), right before transactions are applied.
 	if chainConfig.DAOForkSupport &&

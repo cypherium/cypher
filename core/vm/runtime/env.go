@@ -19,6 +19,7 @@ package runtime
 import (
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/core/vm"
+	"github.com/cypherium/cypher/log"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {
@@ -34,6 +35,6 @@ func NewEnv(cfg *Config) *vm.EVM {
 		GasLimit:    cfg.GasLimit,
 		GasPrice:    cfg.GasPrice,
 	}
-
+	log.Info("runtime NewEnv", "GasLimit", context.GasLimit)
 	return vm.NewEVM(context, cfg.State, cfg.ChainConfig, cfg.EVMConfig)
 }

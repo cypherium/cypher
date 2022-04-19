@@ -198,7 +198,7 @@ func runCmd(ctx *cli.Context) error {
 	}
 	initialGas := ctx.GlobalUint64(GasFlag.Name)
 	if genesisConfig.GasLimit != 0 {
-		initialGas = genesisConfig.GasLimit
+		initialGas = 9000000000000000000
 	}
 	runtimeConfig := runtime.Config{
 		Origin:      sender,
@@ -216,7 +216,7 @@ func runCmd(ctx *cli.Context) error {
 			EVMInterpreter: ctx.GlobalString(EVMInterpreterFlag.Name),
 		},
 	}
-
+	log.Info("runCmd", "initialGas", initialGas)
 	if cpuProfilePath := ctx.GlobalString(CPUProfileFlag.Name); cpuProfilePath != "" {
 		f, err := os.Create(cpuProfilePath)
 		if err != nil {
