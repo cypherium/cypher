@@ -138,10 +138,10 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
-	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
-		return nil, genesisErr
-	}
+	chainConfig, genesisHash, _ := core.SetupGenesisBlock(chainDb, config.Genesis)
+	//if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
+	//	return nil, genesisErr
+	//}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 	chainConfig.RnetPort = config.RnetPort
 	chainConfig.EnabledTPS = config.EnableTPS
