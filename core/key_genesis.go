@@ -202,6 +202,7 @@ func SetupGenesisKeyBlock(db ethdb.Database, genesis *GenesisKey) (*params.Chain
 		return newCfg, stored, fmt.Errorf("missing block number for head header hash")
 	}
 	rawdb.WriteChainConfig(db, stored, newCfg)
+	log.Info("SetupGenesisKeyBlock", "stored hash", stored, "newCfg", newCfg)
 	return newCfg, stored, nil
 }
 
