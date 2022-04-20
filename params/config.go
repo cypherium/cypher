@@ -56,7 +56,7 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(12127),
+		ChainID:             big.NewInt(16162),
 		HomesteadBlock:      big.NewInt(115),
 		DAOForkBlock:        big.NewInt(192),
 		DAOForkSupport:      true,
@@ -95,19 +95,19 @@ var (
 
 	// RopstenChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	RopstenChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(3),
+		ChainID:             big.NewInt(16163),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        nil,
-		DAOForkSupport:      true,
+		DAOForkSupport:      false,
 		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d"),
-		EIP155Block:         big.NewInt(10),
-		EIP158Block:         big.NewInt(10),
-		ByzantiumBlock:      big.NewInt(170),
-		ConstantinopleBlock: big.NewInt(423),
-		PetersburgBlock:     big.NewInt(493),
-		IstanbulBlock:       big.NewInt(648),
-		MuirGlacierBlock:    big.NewInt(711),
+		EIP150Hash:          common.HexToHash("0x289ed64b4da8a9348f1204f347f7ef576ccb487f36094ba3f4b92b1f010ef8ea"),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
 		Ethash:              new(EthashConfig),
 	}
 
@@ -142,10 +142,10 @@ var (
 		EIP150Hash:          common.HexToHash("0x9b095b36c15eaf13044373aef8ee0bd3a382a5abb92e402afa44b8249c3a90e9"),
 		EIP155Block:         big.NewInt(3),
 		EIP158Block:         big.NewInt(3),
-		ByzantiumBlock:      big.NewInt(1035301),
-		ConstantinopleBlock: big.NewInt(3660663),
-		PetersburgBlock:     big.NewInt(4321234),
-		IstanbulBlock:       big.NewInt(5435345),
+		ByzantiumBlock:      big.NewInt(103),
+		ConstantinopleBlock: big.NewInt(366),
+		PetersburgBlock:     big.NewInt(432),
+		IstanbulBlock:       big.NewInt(543),
 		MuirGlacierBlock:    nil,
 		Clique: &CliqueConfig{
 			Period: 15,
