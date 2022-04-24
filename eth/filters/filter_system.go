@@ -52,6 +52,10 @@ const (
 	PendingTransactionsSubscription
 	// BlocksSubscription queries hashes for blocks that are imported
 	BlocksSubscription
+
+	// KeyBlockHeadSubscription queries for key blocks that are imported
+	KeyBlockHeadSubscription
+
 	// LastSubscription keeps track of the last index
 	LastIndexSubscription
 )
@@ -69,15 +73,16 @@ const (
 )
 
 type subscription struct {
-	id        rpc.ID
-	typ       Type
-	created   time.Time
-	logsCrit  cypher.FilterQuery
-	logs      chan []*types.Log
-	hashes    chan []common.Hash
-	headers   chan *types.Header
-	installed chan struct{} // closed when the filter is installed
-	err       chan error    // closed when the filter is uninstalled
+	id         rpc.ID
+	typ        Type
+	created    time.Time
+	logsCrit   cypher.FilterQuery
+	logs       chan []*types.Log
+	hashes     chan []common.Hash
+	headers    chan *types.Header
+	keyHeaders chan *types.KeyBlockHeader
+	installed  chan struct{} // closed when the filter is installed
+	err        chan error    // closed when the filter is uninstalled
 }
 
 // EventSystem creates subscriptions, processes events and broadcasts them to the
@@ -88,11 +93,13 @@ type EventSystem struct {
 	lastHead  *types.Header
 
 	// Subscriptions
-	txsSub         event.Subscription // Subscription for new transaction event
-	logsSub        event.Subscription // Subscription for new log event
-	rmLogsSub      event.Subscription // Subscription for removed log event
-	pendingLogsSub event.Subscription // Subscription for pending log event
-	chainSub       event.Subscription // Subscription for new chain event
+	txsSub          event.Subscription          // Subscription for new transaction event
+	logsSub         event.Subscription          // Subscription for new log event
+	rmLogsSub       event.Subscription          // Subscription for removed log event
+	pendingLogsSub  event.Subscription          // Subscription for pending log event
+	chainSub        event.Subscription          // Subscription for new chain event
+	keyChainHeadSub event.Subscription          // Subscription for key chain head event
+	keyChainHeadCh  chan core.KeyChainHeadEvent // Channel to receive key chain head event
 
 	// Channels
 	install       chan *subscription         // install filter for event notification
@@ -112,15 +119,16 @@ type EventSystem struct {
 // or by stopping the given mux.
 func NewEventSystem(backend Backend, lightMode bool) *EventSystem {
 	m := &EventSystem{
-		backend:       backend,
-		lightMode:     lightMode,
-		install:       make(chan *subscription),
-		uninstall:     make(chan *subscription),
-		txsCh:         make(chan core.NewTxsEvent, txChanSize),
-		logsCh:        make(chan []*types.Log, logsChanSize),
-		rmLogsCh:      make(chan core.RemovedLogsEvent, rmLogsChanSize),
-		pendingLogsCh: make(chan []*types.Log, logsChanSize),
-		chainCh:       make(chan core.ChainEvent, chainEvChanSize),
+		backend:        backend,
+		lightMode:      lightMode,
+		install:        make(chan *subscription),
+		uninstall:      make(chan *subscription),
+		txsCh:          make(chan core.NewTxsEvent, txChanSize),
+		logsCh:         make(chan []*types.Log, logsChanSize),
+		rmLogsCh:       make(chan core.RemovedLogsEvent, rmLogsChanSize),
+		pendingLogsCh:  make(chan []*types.Log, logsChanSize),
+		chainCh:        make(chan core.ChainEvent, chainEvChanSize),
+		keyChainHeadCh: make(chan core.KeyChainHeadEvent, chainEvChanSize),
 	}
 
 	// Subscribe events
@@ -128,6 +136,7 @@ func NewEventSystem(backend Backend, lightMode bool) *EventSystem {
 	m.logsSub = m.backend.SubscribeLogsEvent(m.logsCh)
 	m.rmLogsSub = m.backend.SubscribeRemovedLogsEvent(m.rmLogsCh)
 	m.chainSub = m.backend.SubscribeChainEvent(m.chainCh)
+	m.keyChainHeadSub = m.backend.SubscribeKeyChainHeadEvent(m.keyChainHeadCh)
 	m.pendingLogsSub = m.backend.SubscribePendingLogsEvent(m.pendingLogsCh)
 
 	// Make sure none of the subscriptions are empty
@@ -290,6 +299,22 @@ func (es *EventSystem) SubscribeNewHeads(headers chan *types.Header) *Subscripti
 	return es.subscribe(sub)
 }
 
+// SubscribeNewHeads creates a subscription that writes the header of a block that is
+// imported in the chain.
+func (es *EventSystem) SubscribeNewKeyHeads(headers chan *types.KeyBlockHeader) *Subscription {
+	sub := &subscription{
+		id:         rpc.NewID(),
+		typ:        KeyBlockHeadSubscription,
+		created:    time.Now(),
+		logs:       make(chan []*types.Log),
+		hashes:     make(chan []common.Hash),
+		keyHeaders: headers,
+		installed:  make(chan struct{}),
+		err:        make(chan error),
+	}
+	return es.subscribe(sub)
+}
+
 // SubscribePendingTxs creates a subscription that writes transaction hashes for
 // transactions that enter the transaction pool.
 func (es *EventSystem) SubscribePendingTxs(hashes chan []common.Hash) *Subscription {
@@ -338,6 +363,57 @@ func (es *EventSystem) handleRemovedLogs(filters filterIndex, ev core.RemovedLog
 		if len(matchedLogs) > 0 {
 			f.logs <- matchedLogs
 		}
+	}
+}
+
+// broadcast event to filters that match criteria.
+func (es *EventSystem) broadcast(filters filterIndex, ev interface{}) {
+	if ev == nil {
+		return
+	}
+
+	switch e := ev.(type) {
+	case []*types.Log:
+		if len(e) > 0 {
+			for _, f := range filters[LogsSubscription] {
+				if matchedLogs := filterLogs(e, f.logsCrit.FromBlock, f.logsCrit.ToBlock, f.logsCrit.Addresses, f.logsCrit.Topics); len(matchedLogs) > 0 {
+					f.logs <- matchedLogs
+				}
+			}
+		}
+	case core.RemovedLogsEvent:
+		for _, f := range filters[LogsSubscription] {
+			if matchedLogs := filterLogs(e.Logs, f.logsCrit.FromBlock, f.logsCrit.ToBlock, f.logsCrit.Addresses, f.logsCrit.Topics); len(matchedLogs) > 0 {
+				f.logs <- matchedLogs
+			}
+		}
+	case core.NewTxsEvent:
+		hashes := make([]common.Hash, 0, len(e.Txs))
+		for _, tx := range e.Txs {
+			hashes = append(hashes, tx.Hash())
+		}
+		for _, f := range filters[PendingTransactionsSubscription] {
+			f.hashes <- hashes
+		}
+	case core.ChainEvent:
+		for _, f := range filters[BlocksSubscription] {
+			f.headers <- e.Block.Header()
+		}
+		if es.lightMode && len(filters[LogsSubscription]) > 0 {
+			es.lightFilterNewHead(e.Block.Header(), func(header *types.Header, remove bool) {
+				for _, f := range filters[LogsSubscription] {
+					if matchedLogs := es.lightFilterLogs(header, f.logsCrit.Addresses, f.logsCrit.Topics, remove); len(matchedLogs) > 0 {
+						f.logs <- matchedLogs
+					}
+				}
+			})
+		}
+	case core.KeyChainHeadEvent:
+		//log.Debug("Filter loop got KeyChainHeadEvent", "hash", e.KeyBlock.Header().Hash().Hex())
+		for _, f := range filters[KeyBlockHeadSubscription] {
+			f.keyHeaders <- e.KeyBlock.Header()
+		}
+
 	}
 }
 
@@ -448,6 +524,7 @@ func (es *EventSystem) eventLoop() {
 		es.rmLogsSub.Unsubscribe()
 		es.pendingLogsSub.Unsubscribe()
 		es.chainSub.Unsubscribe()
+		es.keyChainHeadSub.Unsubscribe()
 	}()
 
 	index := make(filterIndex)
@@ -467,6 +544,8 @@ func (es *EventSystem) eventLoop() {
 			es.handlePendingLogs(index, ev)
 		case ev := <-es.chainCh:
 			es.handleChainEvent(index, ev)
+		case ev := <-es.keyChainHeadCh:
+			es.broadcast(index, ev)
 
 		case f := <-es.install:
 			if f.typ == MinedAndPendingLogsSubscription {
@@ -496,6 +575,8 @@ func (es *EventSystem) eventLoop() {
 		case <-es.rmLogsSub.Err():
 			return
 		case <-es.chainSub.Err():
+			return
+		case <-es.keyChainHeadSub.Err():
 			return
 		}
 	}

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -793,6 +794,27 @@ func (s *PublicBlockChainAPI) GetKeyBlockByHash(ctx context.Context, blockHash c
 		return response, err
 	}
 	return nil, types.ErrNotFindBlock
+}
+
+func (s *PublicBlockChainAPI) GetKeyBlocksByNumbers(ctx context.Context, blockNrs []int64) ([]interface{}, error) {
+	response := make([]interface{}, 0, len(blockNrs))
+
+	for _, blockNr := range blockNrs {
+		//log.Debug("GetKeyBlocksByNumbers", "block", blockNr)
+
+		block, _ := s.b.KeyBlockByNumber(ctx, rpc.BlockNumber(blockNr))
+		if block != nil {
+			//log.Debug("GetKeyBlocksByNumbers blockbynumber", "hash", block.Hash().Hex())
+			rpcBlock, err := s.rpcOutputKeyBlock(block)
+			if err != nil {
+				//log.Debug("GetKeyBlocksByNumbers rpcOutputKeyBlock error ", "error", err)
+				continue
+			}
+			response = append(response, rpcBlock)
+		}
+	}
+
+	return response, nil
 }
 
 // GetUncleByBlockHashAndIndex returns the uncle block for the given block hash and index. When fullTx is true
@@ -2219,4 +2241,51 @@ func checkTxFee(gasPrice *big.Int, gas uint64, cap float64) error {
 		return fmt.Errorf("tx fee (%.2f ether) exceeds the configured cap (%.2f ether)", feeFloat, cap)
 	}
 	return nil
+}
+
+// PublicPowCandidateAPI offers and API for the pow candidate.
+type PublicPowCandidateAPI struct {
+	pc *core.CandidatePool
+}
+
+// PublicPowCandidateAPI creates a new pow candidate service that gives information about the pow candidates.
+func NewPublicPowCandidateAPI(b Backend) *PublicPowCandidateAPI {
+	return &PublicPowCandidateAPI{b.CandidatePool()}
+}
+
+type RPCCandidate struct {
+	Version    string      `json:"version"`
+	ParentHash common.Hash `json:"parentHash"`
+	Number     *big.Int    `json:"number"`
+	Difficulty *big.Int    `json:"difficulty"`
+
+	Time      *big.Int         `json:"timestamp"`
+	Nonce     types.BlockNonce `json:"nonce"`
+	MixDigest common.Hash      `json:"mixDigest"`
+	Ip        net.IP           `json:"ip"`
+	PubKey    string           `json:"pubKey"`
+
+	//Version				string					`json:"version"`
+}
+
+func (s *PublicPowCandidateAPI) Content() []RPCCandidate {
+	candidates := s.pc.Content()
+	result := make([]RPCCandidate, 0)
+
+	for _, candidate := range candidates {
+		rpcCandidate := RPCCandidate{
+			ParentHash: candidate.KeyCandidate.ParentHash,
+			Number:     candidate.KeyCandidate.Number,
+			Difficulty: candidate.KeyCandidate.Difficulty,
+			Time:       big.NewInt(int64(candidate.KeyCandidate.Time)),
+			Nonce:      candidate.KeyCandidate.Nonce,
+			MixDigest:  candidate.KeyCandidate.MixDigest,
+			Ip:         candidate.IP,
+			PubKey:     candidate.PubKey,
+		}
+
+		result = append(result, rpcCandidate)
+	}
+
+	return result
 }

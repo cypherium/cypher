@@ -328,7 +328,11 @@ func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header)
 	return ec.c.EthSubscribe(ctx, ch, "newHeads")
 }
 
-// State Access
+// SubscribeNewKeyHead subscribes to notifications about the current blockchain head
+// on the given channel.
+func (ec *Client) SubscribeNewKeyHead(ctx context.Context, ch chan<- *types.KeyBlockHeader) (cypher.Subscription, error) {
+	return ec.c.EthSubscribe(ctx, ch, "newKeyHeads")
+}
 
 // NetworkID returns the network ID (also known as the chain ID) for this chain.
 func (ec *Client) NetworkID(ctx context.Context) (*big.Int, error) {
@@ -539,4 +543,61 @@ func toCallArg(msg cypher.CallMsg) interface{} {
 		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
 	}
 	return arg
+}
+
+// Note that loading full key blocks requires two requests.
+func (ec *Client) KeyBlockByHash(ctx context.Context, hash common.Hash) (*types.KeyBlock, error) {
+	return ec.getKeyBlock(ctx, "eth_getKeyBlockByHash", hash)
+}
+
+func (ec *Client) KeyBlockByNumber(ctx context.Context, number *big.Int) (*types.KeyBlock, error) {
+	return ec.getKeyBlock(ctx, "eth_getKeyBlockByNumber", toBlockNumArg(number))
+}
+
+func (ec *Client) getKeyBlock(ctx context.Context, method string, args ...interface{}) (*types.KeyBlock, error) {
+	var raw json.RawMessage
+	err := ec.c.CallContext(ctx, &raw, method, args...)
+	if err != nil {
+		return nil, err
+	} else if len(raw) == 0 {
+		return nil, errors.New("not found")
+	}
+
+	// Decode header and body.
+	var head *types.KeyBlockHeader
+	if err := json.Unmarshal(raw, &head); err != nil {
+		return nil, err
+	}
+	fmt.Println("head", head)
+	var body *types.KeyBlockBody
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return nil, err
+	}
+	fmt.Println("body", body)
+	b := types.NewKeyBlockWithHeader(head).WithBody(body.InPubKey, body.InAddress, body.OutPubKey, body.OutAddress, body.LeaderPubKey, body.LeaderAddress)
+
+	return b, nil
+}
+
+func (ec *Client) KeyBlocksByNumbers(ctx context.Context, numbers []int64) ([]*types.KeyBlock, error) {
+
+	var raw json.RawMessage
+	err := ec.c.CallContext(ctx, &raw, "eth_getKeyBlocksByNumbers", numbers)
+	if err != nil {
+		return nil, err
+	} else if len(raw) == 0 {
+		return nil, errors.New("not found")
+	}
+
+	heads := make([]*types.KeyBlockHeader, 3)
+	if err := json.Unmarshal(raw, &heads); err != nil {
+		return nil, err
+	}
+
+	blocks := make([]*types.KeyBlock, 0)
+	for _, head := range heads {
+		blocks = append(blocks, types.NewKeyBlockWithHeader(head))
+	}
+
+	return blocks, nil
 }

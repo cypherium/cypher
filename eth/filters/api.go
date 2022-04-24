@@ -31,6 +31,7 @@ import (
 	"github.com/cypherium/cypher/core/types"
 	"github.com/cypherium/cypher/ethdb"
 	"github.com/cypherium/cypher/event"
+	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/rpc"
 )
 
@@ -224,6 +225,40 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 				headersSub.Unsubscribe()
 				return
 			case <-notifier.Closed():
+				headersSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
+}
+
+// NewKeyHeads send a notification each time a new (header) block is appended to the chain.
+func (api *PublicFilterAPI) NewKeyHeads(ctx context.Context) (*rpc.Subscription, error) {
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+
+	go func() {
+		headers := make(chan *types.KeyBlockHeader)
+		headersSub := api.events.SubscribeNewKeyHeads(headers)
+
+		log.Trace("NewKeyHeads subscription")
+
+		for {
+			select {
+			case h := <-headers:
+				log.Trace("NewKeyHeads subscription got new header", "hash", h.Hash().Hex())
+				notifier.Notify(rpcSub.ID, h)
+			case <-rpcSub.Err():
+				headersSub.Unsubscribe()
+				return
+			case <-notifier.Closed():
+				log.Trace("NewKeyHeads unsubscribed")
 				headersSub.Unsubscribe()
 				return
 			}
