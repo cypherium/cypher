@@ -5296,7 +5296,14 @@ var methods = function () {
         inputFormatter: [formatters.inputBlockNumberFormatter, function (val) { return !!val; }],
         outputFormatter: formatters.outputBlockFormatter
     });
-
+      var getKeyBlockByNumber=new Method({
+        name: 'getKeyBlockByNumber',
+        call: 'eth_getKeyBlockByNumber',
+        params: 1,
+        inputFormatter: [formatters.inputBlockNumberFormatter],
+        outputFormatter: formatters.outputKeyBlockFormatter,
+    
+     });
     var getUncle = new Method({
         name: 'getUncle',
         call: uncleCall,
@@ -5304,7 +5311,12 @@ var methods = function () {
         inputFormatter: [formatters.inputBlockNumberFormatter, utils.toHex],
         outputFormatter: formatters.outputBlockFormatter,
 
-    });
+      var getKeyBlockByHash = new Method({
+        name: 'getKeyBlockByHash',
+        call: 'eth_getKeyBlockByHash',
+        params: 1,
+        outputFormatter: formatters.outputKeyBlockFormatter
+      });
 
     var getCompilers = new Method({
         name: 'getCompilers',
@@ -5436,6 +5448,8 @@ var methods = function () {
         getStorageAt,
         getCode,
         getBlock,
+        getKeyBlockByNumber,
+        getKeyBlockByHash,
         getUncle,
         getCompilers,
         getBlockTransactionCount,
