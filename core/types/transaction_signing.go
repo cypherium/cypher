@@ -90,6 +90,19 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 	return tx.WithSignature(s, sig)
 }
 
+// SignTxWithED25519 signs the transaction using the given signer and private key,using ed25519
+func SignTxWithED25519(tx *Transaction, s Signer, prv ed25519.PrivateKey, pub ed25519.PublicKey) (*Transaction, error) {
+	h := s.Hash(tx)
+	sig, err := crypto.SignWithED25519(h[:], prv)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ed25519 sig is 64 bytes long, but Signer needs 65 bytes, so we need pad our sig with one byte ( as V )
+	paddingSig := append(sig, []byte{0}...)
+	return tx.WithSignature25519(s, paddingSig, pub)
+}
+
 // Sender returns the address derived from the signature (V, R, S) using secp256k1
 // elliptic curve and an error if it failed deriving or upon an incorrect
 // signature.
