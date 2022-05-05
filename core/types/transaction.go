@@ -28,7 +28,6 @@ import (
 	"github.com/cypherium/cypher/common/hexutil"
 	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/log"
-	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rlp"
 )
 
@@ -50,6 +49,7 @@ type Transaction struct {
 }
 
 type txdata struct {
+	SenderKey    []byte          `json:"senderKey" gencodec:"required"`
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     uint64          `json:"gas"      gencodec:"required"`
@@ -67,6 +67,7 @@ type txdata struct {
 }
 
 type txdataMarshaling struct {
+	SenderKey    hexutil.Bytes
 	AccountNonce hexutil.Uint64
 	Price        *hexutil.Big
 	GasLimit     hexutil.Uint64
@@ -191,9 +192,10 @@ func (tx *Transaction) GasPriceCmp(other *Transaction) int {
 func (tx *Transaction) GasPriceIntCmp(other *big.Int) int {
 	return tx.data.Price.Cmp(other)
 }
-func (tx *Transaction) Value() *big.Int  { return new(big.Int).Set(tx.data.Amount) }
-func (tx *Transaction) Nonce() uint64    { return tx.data.AccountNonce }
-func (tx *Transaction) CheckNonce() bool { return true }
+func (tx *Transaction) Value() *big.Int   { return new(big.Int).Set(tx.data.Amount) }
+func (tx *Transaction) Nonce() uint64     { return tx.data.AccountNonce }
+func (tx *Transaction) SenderKey() []byte { return tx.data.SenderKey }
+func (tx *Transaction) CheckNonce() bool  { return true }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
@@ -261,6 +263,16 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		time: tx.time,
 	}
 	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
+	return cpy, nil
+}
+
+func (tx *Transaction) WithSignature25519(signer Signer, sig []byte, pub []byte) (*Transaction, error) {
+	r, s, v, err := signer.SignatureValues(tx, sig)
+	if err != nil {
+		return nil, err
+	}
+	cpy := &Transaction{data: tx.data}
+	cpy.data.R, cpy.data.S, cpy.data.V, cpy.data.SenderKey = r, s, v, pub
 	return cpy, nil
 }
 
@@ -361,12 +373,10 @@ type TransactionsByPriceAndNonce struct {
 //
 // Note, the input map is reowned so the caller should not interact any more with
 // if after providing it to the constructor.
-func NewTransactionsByPriceAndNonce(config *params.ChainConfig, blockNumber *big.Int, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
-	var signer Signer
+func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transactions) *TransactionsByPriceAndNonce {
 	// Initialize a price and received time based heap with the head transactions
 	heads := make(TxByPriceAndTime, 0, len(txs))
 	for from, accTxs := range txs {
-		signer = MakeSignerAutoJudgement(config, blockNumber, accTxs[0].V())
 		// Ensure the sender address is from the signer
 		acc, err := Sender(signer, accTxs[0])
 		if err == nil {
