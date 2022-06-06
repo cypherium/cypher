@@ -621,8 +621,8 @@ func (s *Service) updateCommittee(keyBlock *types.KeyBlock) bool {
 	return bStore
 }
 
-func (s *Service) Committee_OnStored(keyblock *types.KeyBlock, mb *bftview.Committee) {
-	log.Debug("store committee", "keyNumber", keyblock.NumberU64(), "ip0", mb.List[0].Address, "ipn", mb.List[len(mb.List)-1].Address)
+func (s *Service) Committee_OnStored(keyblock *types.KeyBlock) {
+	log.Debug("store committee", "keyNumber", keyblock.NumberU64(), "OutAddress", keyblock.OutAddress(0), "InAddress", keyblock.InAddress())
 	if keyblock.HasNewNode() && keyblock.NumberU64() == s.kbc.CurrentBlockN() {
 		s.netService.AdjustConnect(keyblock.OutAddress(1))
 	}
@@ -829,7 +829,7 @@ func (s *Service) Exceptions(blockNumber int64) []string {
 	if cm == nil {
 		return nil
 	}
-	indexs := hotstuff.MaskToExceptionIndexs(block.SignInfo().Exceptions, len(cm))
+	indexs := hotstuff.MaskToExceptionIndexs(block.Exceptions(), len(cm))
 	if indexs == nil {
 		return nil
 	}
@@ -891,7 +891,7 @@ func (s *Service) TakePartInBlocks(address common.Address, checkKeyNumber int64)
 		if block == nil {
 			return nil
 		}
-		indexs := hotstuff.MaskToExceptionIndexs(block.SignInfo().Exceptions, n)
+		indexs := hotstuff.MaskToExceptionIndexs(block.Exceptions(), n)
 		if indexs == nil {
 			takePartInNumberList = append(takePartInNumberList, strconv.FormatInt(int64(i), 10))
 			continue

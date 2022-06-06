@@ -27,6 +27,8 @@ import (
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/common/hexutil"
 	"github.com/cypherium/cypher/crypto"
+
+	//	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rlp"
 )
@@ -296,7 +298,6 @@ func (r Receipts) GetRlp(i int) []byte {
 // data and contextual infos like containing block and transactions.
 func (r Receipts) DeriveFields(config *params.ChainConfig, hash common.Hash, number uint64, txs Transactions) error {
 	signer := MakeSigner(config, new(big.Int).SetUint64(number))
-
 	logIndex := uint(0)
 	if len(txs) != len(r) {
 		return errors.New("transaction and receipt count mismatch")

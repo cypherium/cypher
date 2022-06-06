@@ -63,6 +63,7 @@ var (
 		utils.LegacyBootnodesV4Flag,
 		utils.LegacyBootnodesV5Flag,
 		utils.DataDirFlag,
+		utils.FromDataDirFlag,
 		utils.AncientFlag,
 		utils.KeyStoreDirFlag,
 		utils.ExternalSignerFlag,
@@ -222,6 +223,7 @@ func init() {
 		// See chaincmd.go:
 		initCommand,
 		importCommand,
+		importChainCommand,
 		exportCommand,
 		importPreimagesCommand,
 		exportPreimagesCommand,

@@ -25,7 +25,7 @@ import (
 	"github.com/cypherium/cypher/ethclient"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rpc"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // newClient creates a client with specified remote URL.

@@ -189,10 +189,10 @@ func (api *API) Status(startBlockNum *rpc.BlockNumber, endBlockNum *rpc.BlockNum
 		if h == nil {
 			return nil, fmt.Errorf("missing block %d", n)
 		}
-		if h.Difficulty.Cmp(diffInTurn) == 0 {
+		if h.Difficulty().Cmp(diffInTurn) == 0 {
 			optimals++
 		}
-		diff += h.Difficulty.Uint64()
+		diff += h.Difficulty().Uint64()
 		sealer, err := api.clique.Author(h)
 		if err != nil {
 			return nil, err

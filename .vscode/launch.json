@@ -1,0 +1,22 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}",
+            "args": [
+                "--rnetport", "7104", "--syncmode", "full","--nat=extip:192.168.1.211", "--port","16004", "--http.port", "18004",
+                "--datadir", "./data", "--networkid", "123676","--gcmode", "archive",
+                "--bootnodes", "enode://3969107855b3bcb7b3e681e8dbb5bea71a0b1f662fc2a9f4165258060db22b3e1efcad271dddcac94f6214c8f8032b12b613dc721f6ee4b065a20020714aea81@127.0.0.1:30301"
+            ],
+            "showLog": true,
+            "dlvFlags": ["--check-go-version=false"]
+        }
+    ]
+}

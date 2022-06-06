@@ -748,7 +748,7 @@ func (bc *BlockChain) Genesis() *types.Block {
 	return bc.genesisBlock
 }
 
-// GetBody retrieves a block body (transactions and uncles) from the database by
+// GetBody retrieves a block body (transactions ) from the database by
 // hash, caching it if found.
 func (bc *BlockChain) GetBody(hash common.Hash) *types.Body {
 	// Short circuit if the body's already in the cache, retrieve otherwise
@@ -894,17 +894,6 @@ func (bc *BlockChain) GetBlocksFromHash(hash common.Hash, n int) (blocks []*type
 		*number--
 	}
 	return
-}
-
-// GetUnclesInChain retrieves all the uncles from a given block backwards until
-// a specific distance is reached.
-func (bc *BlockChain) GetUnclesInChain(block *types.Block, length int) []*types.Header {
-	uncles := []*types.Header{}
-	for i := 0; block != nil && i < length; i++ {
-		uncles = append(uncles, block.Uncles()...)
-		block = bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
-	}
-	return uncles
 }
 
 // TrieNode retrieves a blob of data associated with a trie node
@@ -1648,15 +1637,39 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 	return n, err
 }
 
-func (bc *BlockChain) InsertBlock(block *types.Block) (int, error) {
+func (bc *BlockChain) InsertBlock(block *types.Block, verifySign bool) (int, error) {
 	bc.blockProcFeed.Send(true)
 	defer bc.blockProcFeed.Send(false)
 	bc.wg.Add(1)
 	bc.chainmu.Lock()
-	n, err := bc.insertChain(types.Blocks{block}, true, false)
+	n, err := bc.insertChain(types.Blocks{block}, true, verifySign)
 	bc.chainmu.Unlock()
 	bc.wg.Done()
 	return n, err
+}
+
+func (bc *BlockChain) CheckState(parent *types.Block, block *types.Block) {
+	pstate, err := state.New(parent.Root(), bc.stateCache, nil)
+	if pstate == nil {
+		log.Error("insertchain", "state==nil", err)
+		return
+	}
+	root := pstate.IntermediateRoot(false).Bytes()
+
+	fmt.Println("root", root)
+
+	// Process block using the parent state as reference point.
+	receipts, _, usedGas, err := bc.Processor().Process(block, pstate, bc.vmConfig)
+	if err != nil {
+		bc.reportBlock(block, receipts, err)
+		return
+	}
+	err = bc.Validator().ValidateState(block, pstate, receipts, usedGas)
+	if err != nil {
+		bc.reportBlock(block, receipts, err)
+		return
+	}
+
 }
 
 // insertChain is the internal implementation of InsertChain, which assumes that
@@ -1790,13 +1803,12 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		// just skip the block (we already validated it once fully (and crashed), since
 		// its header and body was already in the database).
 		if err == ErrKnownBlock {
-			logger := log.Debug
+			logger := log.Info
 			if bc.chainConfig.Clique == nil {
 				logger = log.Warn
 			}
 			logger("Inserted known block", "number", block.Number(), "hash", block.Hash(),
-				"uncles", len(block.Uncles()), "txs", len(block.Transactions()), "gas", block.GasUsed(),
-				"root", block.Root())
+				"txs", len(block.Transactions()), "gas", block.GasUsed(), "root", block.Root())
 
 			// Special case. Commit the empty receipt slice if we meet the known
 			// block in the middle. It can only happen in the clique chain. Whenever
@@ -1918,7 +1930,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		switch status {
 		case CanonStatTy:
 			log.Debug("Inserted new block", "number", block.Number(), "hash", block.Hash(),
-				"uncles", len(block.Uncles()), "txs", len(block.Transactions()), "gas", block.GasUsed(),
+				"txs", len(block.Transactions()), "gas", block.GasUsed(),
 				"elapsed", common.PrettyDuration(time.Since(start)),
 				"root", block.Root())
 
@@ -1930,16 +1942,14 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		case SideStatTy:
 			log.Debug("Inserted forked block", "number", block.Number(), "hash", block.Hash(),
 				"diff", block.Difficulty(), "elapsed", common.PrettyDuration(time.Since(start)),
-				"txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()),
-				"root", block.Root())
+				"txs", len(block.Transactions()), "gas", block.GasUsed(), "root", block.Root())
 
 		default:
 			// This in theory is impossible, but lets be nice to our future selves and leave
 			// a log, instead of trying to track down blocks imports that don't emit logs.
 			log.Warn("Inserted block with unknown status", "number", block.Number(), "hash", block.Hash(),
 				"diff", block.Difficulty(), "elapsed", common.PrettyDuration(time.Since(start)),
-				"txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()),
-				"root", block.Root())
+				"txs", len(block.Transactions()), "gas", block.GasUsed(), "root", block.Root())
 		}
 		stats.processed++
 		stats.usedGas += usedGas
@@ -2023,9 +2033,8 @@ func (bc *BlockChain) insertSideChain(block *types.Block, it *insertIterator) (i
 				return it.index, err
 			}
 			log.Debug("Injected sidechain block", "number", block.Number(), "hash", block.Hash(),
-				"diff", block.Difficulty(), "elapsed", common.PrettyDuration(time.Since(start)),
-				"txs", len(block.Transactions()), "gas", block.GasUsed(), "uncles", len(block.Uncles()),
-				"root", block.Root())
+				"diff", block.Difficulty(),"elapsed", common.PrettyDuration(time.Since(start)),
+				"txs", len(block.Transactions()), "gas", block.GasUsed(), "root", block.Root())
 		}
 	}
 	// At this point, we've written all sidechain blocks to database. Loop ended
@@ -2374,9 +2383,9 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 
 	var receiptString string
 	for i, receipt := range receipts {
-		receiptString += fmt.Sprintf("\t %d: cumulative: %v gas: %v contract: %v status: %v tx: %v logs: %v bloom: %x state: %x\n",
+		receiptString += fmt.Sprintf("\t %d: cumulative: %v gas: %v contract: %v status: %v tx: %v logs: %v state: %x\n",
 			i, receipt.CumulativeGasUsed, receipt.GasUsed, receipt.ContractAddress.Hex(),
-			receipt.Status, receipt.TxHash.Hex(), receipt.Logs, receipt.Bloom, receipt.PostState)
+			receipt.Status, receipt.TxHash.Hex(), receipt.Logs, receipt.PostState)
 	}
 	log.Error(fmt.Sprintf(`
 ########## BAD BLOCK #########
@@ -2534,5 +2543,9 @@ func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscr
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
 }
 func (bc *BlockChain) GetKeyChainReader() types.KeyChainReader {
+	return bc.keyBlockChain
+}
+
+func (bc *BlockChain) GetKeyChain() *KeyBlockChain {
 	return bc.keyBlockChain
 }

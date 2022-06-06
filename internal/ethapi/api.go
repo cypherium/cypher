@@ -755,22 +755,6 @@ func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, hash common.Ha
 	return nil, err
 }
 
-// GetUncleByBlockNumberAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
-	block, err := s.b.BlockByNumber(ctx, blockNr)
-	if block != nil {
-		uncles := block.Uncles()
-		if index >= hexutil.Uint(len(uncles)) {
-			log.Debug("Requested uncle not found", "number", blockNr, "hash", block.Hash(), "index", index)
-			return nil, nil
-		}
-		block = types.NewBlockWithHeader(uncles[index])
-		return s.rpcMarshalBlock(ctx, block, false, false)
-	}
-	return nil, err
-}
-
 func (s *PublicBlockChainAPI) GetKeyBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (map[string]interface{}, error) {
 	kbc := s.b.GetKeyBlockChain()
 	var keyblock *types.KeyBlock
@@ -793,40 +777,6 @@ func (s *PublicBlockChainAPI) GetKeyBlockByHash(ctx context.Context, blockHash c
 		return response, err
 	}
 	return nil, types.ErrNotFindBlock
-}
-
-// GetUncleByBlockHashAndIndex returns the uncle block for the given block hash and index. When fullTx is true
-// all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
-	block, err := s.b.BlockByHash(ctx, blockHash)
-	if block != nil {
-		uncles := block.Uncles()
-		if index >= hexutil.Uint(len(uncles)) {
-			log.Debug("Requested uncle not found", "number", block.Number(), "hash", blockHash, "index", index)
-			return nil, nil
-		}
-		block = types.NewBlockWithHeader(uncles[index])
-		return s.rpcMarshalBlock(ctx, block, false, false)
-	}
-	return nil, err
-}
-
-// GetUncleCountByBlockNumber returns number of uncles in the block for the given block number
-func (s *PublicBlockChainAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
-		n := hexutil.Uint(len(block.Uncles()))
-		return &n
-	}
-	return nil
-}
-
-// GetUncleCountByBlockHash returns number of uncles in the block for the given block hash
-func (s *PublicBlockChainAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	if block, _ := s.b.BlockByHash(ctx, blockHash); block != nil {
-		n := hexutil.Uint(len(block.Uncles()))
-		return &n
-	}
-	return nil
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
@@ -915,7 +865,7 @@ type account struct {
 }
 
 func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides map[common.Address]account, vmCfg vm.Config, timeout time.Duration, globalGasCap uint64) (*core.ExecutionResult, error) {
-	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
+	//	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if state == nil || err != nil {
@@ -1226,13 +1176,7 @@ func RPCMarshalHeader(head *types.Header) map[string]interface{} {
 		"number":           (*hexutil.Big)(head.Number),
 		"hash":             head.Hash(),
 		"parentHash":       head.ParentHash,
-		"nonce":            head.Nonce,
-		"mixHash":          head.MixDigest,
-		"sha3Uncles":       head.UncleHash,
-		"logsBloom":        head.Bloom,
 		"stateRoot":        head.Root,
-		"miner":            head.Coinbase,
-		"difficulty":       (*hexutil.Big)(head.Difficulty),
 		"extraData":        hexutil.Bytes(head.Extra),
 		"size":             hexutil.Uint64(head.Size()),
 		"gasLimit":         hexutil.Uint64(head.GasLimit),
@@ -1271,13 +1215,6 @@ func RPCMarshalBlock(block *types.Block, inclTx bool, fullTx bool) (map[string]i
 		}
 		fields["transactions"] = transactions
 	}
-	uncles := block.Uncles()
-	uncleHashes := make([]common.Hash, len(uncles))
-	for i, uncle := range uncles {
-		uncleHashes[i] = uncle.Hash()
-	}
-	fields["uncles"] = uncleHashes
-
 	return fields, nil
 }
 
@@ -1369,18 +1306,18 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	v, r, s := tx.RawSignatureValues()
 
 	result := &RPCTransaction{
-		From:     from,
-		Gas:      hexutil.Uint64(tx.Gas()),
-		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
-		SenderKey: hexutil.Bytes(tx.SenderKey()),		
+		From:      from,
+		Gas:       hexutil.Uint64(tx.Gas()),
+		GasPrice:  (*hexutil.Big)(tx.GasPrice()),
+		Hash:      tx.Hash(),
+		Input:     hexutil.Bytes(tx.Data()),
+		Nonce:     hexutil.Uint64(tx.Nonce()),
+		To:        tx.To(),
+		Value:     (*hexutil.Big)(tx.Value()),
+		V:         (*hexutil.Big)(v),
+		R:         (*hexutil.Big)(r),
+		S:         (*hexutil.Big)(s),
+		SenderKey: hexutil.Bytes(tx.SenderKey()),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = &blockHash
@@ -1784,10 +1721,8 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
-			if !strings.Contains(account.URL.Path, "ED25519") {
-				addresses = append(addresses, account.Address)
-				noceMap[account.Address], _ = s.b.GetPoolNonce(ctx, account.Address)
-			}
+			addresses = append(addresses, account.Address)
+			noceMap[account.Address], _ = s.b.GetPoolNonce(ctx, account.Address)
 		}
 	}
 	if len(addresses) < 2 {
@@ -1830,7 +1765,7 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 	labelReSend:
 		txNonce := noceMap[addrfrom]
 		noceMap[addrfrom]++
-		log.Debug("AutoTrans", "fromIndex", fromIndex, "nonce", txNonce)
+		//log.Debug("AutoTrans", "fromIndex", fromIndex, "nonce", txNonce)
 		amount := 20000000000000000 //+ tmNow //balanceFrom.Uint64() / 1000
 		tx := types.NewTransaction(txNonce, addresses[toIndex], big.NewInt(int64(amount)), uint64(21000), big.NewInt(18100000000), []byte{})
 
@@ -1839,7 +1774,6 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 			log.Info("AutoTrans failed to sign transaction", "sign error", err)
 			break
 		}
-		log.Debug("AutoTrans...1")
 		hash, err := SubmitTransaction(ctx, s.b, signed, true)
 		if err != nil || hash == (common.Hash{}) { //&& err != core.ErrAlreadyKnown {
 			log.Error("AutoTrans failed to submit transaction", "amount", amount, "nonce", txNonce, "submit error", err)
@@ -1852,7 +1786,6 @@ func (s *PublicTransactionPoolAPI) autoTrans(ctx context.Context, delay int) {
 			//}
 			//break
 		}
-		log.Debug("AutoTrans...2")
 		time.Sleep(delayTm)
 		/*
 			num := 0

@@ -23,7 +23,7 @@ import (
 
 const (
 	DisableGAS             = false
-	KeyblockPerTxBlocks    = 360
+	KeyblockPerTxBlocks    = 60
 	MaxTxCountPerBlock     = 1024
 	AckTimeout             = 120 * time.Second
 	HeatBeatTimeout        = 10 * time.Second
@@ -33,6 +33,7 @@ const (
 	CheckBackNumber        = 10
 	CollectVoteInfoTimeout = 5 * time.Second
 	ForkFeeBlock           = 13270
+	ForkNewVerBlock        = 279
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// these are original values from upstream Geth, used in ethash consensus
@@ -40,9 +41,9 @@ const (
 	OriginalGasLimitBoundDivisor uint64 = 1024 // Minimum the gas limit may ever be.
 
 	// modified values for Cypher
-	GasLimitBoundDivisor uint64 = 4096      // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 700000000 // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 800000000 // Gas limit of the Genesis block.
+	GasLimitBoundDivisor uint64 = 1024    // The bound divisor of the gas limit, used in update calculations.
+	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 4712388 // Gas limit of the Genesis block.
 
 	MaximumExtraDataSize  uint64 = 51200 // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
@@ -164,6 +165,8 @@ const (
 	CypherMaximumExtraDataSize uint64 = 65 // Maximum size extra data may be after Genesis.
 	// payload for a transaction, the size of the buffer to 128kb to match the maximum allowed in chain config
 	CypherMaxPayloadBufferSize uint64 = 128
+
+	TxDataGas uint64 = 100
 )
 
 // Gas discount table for BLS12-381 G1 and G2 multi exponentiation operations

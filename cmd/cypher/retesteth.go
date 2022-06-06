@@ -107,7 +107,7 @@ type RetestethAPI struct {
 	db            state.Database
 	chainConfig   *params.ChainConfig
 	author        common.Address
-	extraData     []byte
+	extraData     string
 	genesisHash   common.Hash
 	engine        *NoRewardEngine
 	blockchain    *core.BlockChain
@@ -153,7 +153,7 @@ type CParamsGenesis struct {
 	Author     common.Address        `json:"author"`
 	Timestamp  math.HexOrDecimal64   `json:"timestamp"`
 	ParentHash common.Hash           `json:"parentHash"`
-	ExtraData  hexutil.Bytes         `json:"extraData"`
+	ExtraData  string                `json:"extraData"`
 	GasLimit   math.HexOrDecimal64   `json:"gasLimit"`
 }
 
@@ -226,35 +226,23 @@ func (e *NoRewardEngine) Prepare(chain consensus.ChainHeaderReader, header *type
 }
 */
 
-func (e *NoRewardEngine) accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
-	// Simply touch miner and uncle coinbase accounts
-	reward := big.NewInt(0)
-	for _, uncle := range uncles {
-		state.AddBalance(uncle.Coinbase, reward)
-	}
-	state.AddBalance(header.Coinbase, reward)
-}
-
 func (e *NoRewardEngine) Finalize(chain consensus.ChainHeaderReader, header *types.Header, statedb *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, totalGas uint64) {
+	receipts []*types.Receipt) {
 	if e.rewardsOn {
-		e.inner.Finalize(chain, header, statedb, txs, uncles, totalGas)
+		e.inner.Finalize(chain, header, statedb, txs, receipts)
 	} else {
-		e.accumulateRewards(chain.Config(), statedb, header, uncles)
 		header.Root = statedb.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	}
 }
 
 func (e *NoRewardEngine) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, statedb *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+	receipts []*types.Receipt) (*types.Block, error) {
 	if e.rewardsOn {
-		return e.inner.FinalizeAndAssemble(chain, header, statedb, txs, uncles, receipts)
+		return e.inner.FinalizeAndAssemble(chain, header, statedb, txs, receipts)
 	} else {
-		e.accumulateRewards(chain.Config(), statedb, header, uncles)
 		header.Root = statedb.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-
 		// Header seems complete, assemble into a block and return
-		return types.NewBlock(header, txs, uncles, receipts, new(trie.Trie)), nil
+		return types.NewBlock(header, txs, receipts, new(trie.Trie)), nil
 	}
 }
 func (e *NoRewardEngine) CalcKeyBlockDifficulty(chain types.KeyChainReader, time uint64, parent *types.KeyBlockHeader) *big.Int {
@@ -495,10 +483,10 @@ func (api *RetestethAPI) mineBlock() error {
 		ParentHash: parent.Hash(),
 		Number:     big.NewInt(int64(number + 1)),
 		GasLimit:   gasLimit,
-		Extra:      api.extraData,
+		Extra:      []byte(api.extraData),
 		Time:       timestamp,
 	}
-	header.Coinbase = api.author
+	//header.Coinbase = api.author
 	if api.engine != nil {
 		//?? api.engine.Prepare(api.blockchain, header)
 	}
@@ -541,7 +529,6 @@ func (api *RetestethAPI) mineBlock() error {
 				receipt, err := core.ApplyTransaction(
 					api.chainConfig,
 					api.blockchain,
-					&api.author,
 					gasPool,
 					statedb,
 					header, tx, &header.GasUsed, *api.blockchain.GetVMConfig(),
@@ -568,7 +555,7 @@ func (api *RetestethAPI) mineBlock() error {
 			}
 		}
 	}
-	block, err := api.engine.FinalizeAndAssemble(api.blockchain, header, statedb, txs, []*types.Header{}, receipts)
+	block, err := api.engine.FinalizeAndAssemble(api.blockchain, header, statedb, txs, receipts)
 	if err != nil {
 		return err
 	}

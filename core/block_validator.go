@@ -28,7 +28,7 @@ import (
 	"github.com/cypherium/cypher/trie"
 )
 
-// BlockValidator is responsible for validating block headers, uncles and
+// BlockValidator is responsible for validating block headers
 // processed state.
 //
 // BlockValidator implements Validator.
@@ -48,7 +48,7 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 	return validator
 }
 
-// ValidateBody validates the given block's uncles and verifies the block
+// ValidateBody validates the given block's  and verifies the block
 // header's transaction and uncle roots. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
@@ -56,16 +56,8 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return ErrKnownBlock
 	}
-	// Header validity is known at this point, check the uncles and transactions
+	// Header validity is known at this point, check the  transactions
 	header := block.Header()
-	/*??
-	if err := v.engine.VerifyUncles(v.bc, block); err != nil {
-		return err
-	}
-	if hash := types.CalcUncleHash(block.Uncles()); hash != header.UncleHash {
-		return fmt.Errorf("uncle root hash mismatch: have %x, want %x", hash, header.UncleHash)
-	}
-	*/
 	if hash := types.DeriveSha(block.Transactions(), new(trie.Trie)); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
@@ -90,12 +82,7 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	if block.GasUsed() != usedGas {
 		return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), usedGas)
 	}
-	// Validate the received block's bloom with the one derived from the generated receipts.
-	// For valid blocks this should always validate to true.
-	rbloom := types.CreateBloom(receipts)
-	if rbloom != header.Bloom {
-		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
-	}
+
 	// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, R1]]))
 	receiptSha := types.DeriveSha(receipts, new(trie.Trie))
 	if receiptSha != header.ReceiptHash {
@@ -103,7 +90,7 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
-	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
+	if root := statedb.IntermediateRoot(false); header.Root != root {
 		return fmt.Errorf("invalid merkle root (remote: %x local: %x)", header.Root, root)
 	}
 	return nil
@@ -153,17 +140,16 @@ func (v *BlockValidator) VerifySignature(block *types.Block) error {
 		return types.ErrInvalidCommittee
 	}
 	pubs := mycommittee.ToBlsPublicKeys(block.KeyHash())
-
 	buf := block.CopyOrg().EncodeToBytes()
+
 	if buf == nil {
 		return types.ErrEncodeRLP
 	}
-	si := block.SignInfo()
-	if si == nil {
+	if block.Signature() == nil {
 		return types.ErrEmptySignature
 	}
 
-	if !hotstuff.VerifySignature(si.Signature, si.Exceptions, buf, pubs, hotstuff.CalcThreshold(len(pubs))) {
+	if !hotstuff.VerifySignature(block.Signature(), block.Exceptions(), buf, pubs, hotstuff.CalcThreshold(len(pubs))) {
 		return types.ErrInvalidSignature
 	}
 	return nil

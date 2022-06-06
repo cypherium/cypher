@@ -193,7 +193,7 @@ func (h *Hash) SetBytes(b []byte) {
 	copy(h[HashLength-len(b):], b)
 }
 
-func EmptyHash(h Hash) bool {
+func HashIsEmpty(h Hash) bool {
 	return h == Hash{}
 }
 
@@ -317,7 +317,8 @@ type Cnode struct {
 	Address  string `json:"address" gencodec:"required"`
 	CoinBase string `json:"coinbase" gencodec:"required"`
 	//	Suite    string `json:"suite" gencodec:"required"`
-	Public string `json:"public" gencodec:"required"`
+	Public   string `json:"public" gencodec:"required"`
+	IsMaster bool
 }
 
 type NodeConfig struct {

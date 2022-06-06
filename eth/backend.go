@@ -205,7 +205,7 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		}
 	)
 	eth.candidatePool = core.NewCandidatePool(eth, eth.EventMux(), chainDb)
-	eth.keyBlockChain, err = core.NewKeyBlockChain(eth, chainDb, cacheConfig, chainConfig, eth.engine, eth.EventMux())
+	eth.keyBlockChain, err = core.NewKeyBlockChain(chainDb, cacheConfig, chainConfig, eth.engine, eth.EventMux(), eth.candidatePool)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,6 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 	stack.RegisterLifecycle(eth)
 
 	eth.reconfig, _ = reconfig.New(stack, chainConfig, eth)
-
 	return eth, nil
 }
 

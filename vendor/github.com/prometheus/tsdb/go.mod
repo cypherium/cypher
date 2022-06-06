@@ -1,5 +1,7 @@
 module github.com/prometheus/tsdb
 
+go 1.14
+
 require (
 	github.com/cespare/xxhash v1.1.0
 	github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954

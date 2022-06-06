@@ -28,6 +28,7 @@ import (
 
 	"github.com/cypherium/cypher/cmd/utils"
 	"github.com/cypherium/cypher/common"
+	"github.com/cypherium/cypher/common/fdlimit"
 	"github.com/cypherium/cypher/console/prompt"
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/core/rawdb"
@@ -37,6 +38,7 @@ import (
 	"github.com/cypherium/cypher/event"
 	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/metrics"
+	"github.com/cypherium/cypher/reconfig/bftview"
 	"github.com/cypherium/cypher/trie"
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -102,6 +104,18 @@ with several RLP-encoded blocks, or several files can be used.
 
 If only one file is used, import error will result in failure. If several files are used,
 processing will proceed even if an individual RLP-file import failure occurs.`,
+	}
+	importChainCommand = cli.Command{
+		Action:    utils.MigrateFlags(importOldChain),
+		Name:      "importChain",
+		Usage:     "Import old blockchain data into a new directory",
+		ArgsUsage: "<dataDirName>",
+		Flags: []cli.Flag{
+			utils.DataDirFlag,
+			utils.FromDataDirFlag,
+		},
+		Category:    "BLOCKCHAIN COMMANDS",
+		Description: `Import old blockchain data into a new directory`,
 	}
 	exportCommand = cli.Command{
 		Action:    utils.MigrateFlags(exportChain),
@@ -267,6 +281,7 @@ func initGenesis(ctx *cli.Context) error {
 		if err != nil {
 			utils.Fatalf("Failed to write genesis key block: %v", err)
 		}
+		genesis.KeyHash = hash
 		_, hash, err = core.SetupGenesisBlock(chaindb, genesis)
 		if err != nil {
 			utils.Fatalf("Failed to write genesis block: %v", err)
@@ -386,7 +401,161 @@ func importChain(ctx *cli.Context) error {
 	fmt.Println(ioStats)
 	return importErr
 }
+func makeDatabaseHandles() int {
+	limit, err := fdlimit.Maximum()
+	if err != nil {
+		panic("Failed to retrieve file descriptor allowance: %v" + err.Error())
+	}
+	raised, err := fdlimit.Raise(uint64(limit))
+	if err != nil {
+		panic("Failed to raise file descriptor allowance: %v" + err.Error())
+	}
+	return int(raised / 2) // Leave half for networking and other stuff
+}
 
+func importOldChain(ctx *cli.Context) error {
+	todirname := ctx.GlobalString(utils.DataDirFlag.Name)
+	if todirname == "" {
+		fmt.Println("Please specify the from directory '--datadir <dir>' ")
+		return nil
+	}
+	if !filepath.IsAbs(todirname) {
+		absdatadir, err := filepath.Abs(todirname)
+		if err != nil {
+			fmt.Println("file open error", err)
+			return err
+		}
+		todirname = absdatadir
+	}
+	todirname = filepath.Join(todirname, "cypher/chaindata")
+
+	dirname := ctx.GlobalString(utils.FromDataDirFlag.Name)
+	if dirname == "" {
+		fmt.Println("Please specify the from directory '--from <dir>' ")
+		return nil
+	}
+	if !filepath.IsAbs(dirname) {
+		absdatadir, err := filepath.Abs(dirname)
+		if err != nil {
+			fmt.Println("file open error", err)
+			return err
+		}
+		dirname = absdatadir
+	}
+	dirname = filepath.Join(dirname, "cypher/chaindata")
+	fmt.Println("Will import chain...")
+	fmt.Println("From: " + dirname)
+	fmt.Println("To:   " + todirname)
+	confirm, err := prompt.Stdin.PromptConfirm("Are you sure ?")
+	if !confirm || err != nil {
+		return nil
+	}
+
+	oldDB, err := rawdb.NewLevelDBDatabase(dirname, 512, 5120, "")
+	if err != nil {
+		fmt.Println("failed to open database: "+dirname, err.Error())
+		return err
+	}
+	defer oldDB.Close()
+	//-------------------------------------------------
+	stack, _ := makeConfigNode(ctx)
+	if stack == nil {
+		fmt.Println("Failed to makeConfigNode in directory: " + todirname)
+		return nil
+	}
+	defer stack.Close()
+
+	chain, db := utils.MakeChain(ctx, stack, false, true)
+	if chain == nil || db == nil {
+		fmt.Println("Failed to MakeChain in directory: " + todirname)
+		return nil
+	}
+	defer db.Close()
+
+	b := chain.GetBlockByNumber(0)
+	if b == nil {
+		fmt.Println("Please initialize Genesis first")
+		return nil
+	}
+
+	kbc := chain.GetKeyChain()
+	bftview.SetCommitteeConfig(db, kbc, nil)
+	//-------------------------------------------------
+	hash := rawdb.ReadCanonicalHash(oldDB, 0)
+	block := rawdb.ReadBlock(oldDB, hash, 0)
+	if block == nil {
+		fmt.Println("Can't find the Genesis block in database: " + dirname)
+		return nil
+	}
+	keyHash := block.KeyHash()
+
+	head := rawdb.ReadHeadHeaderHash(oldDB)
+	number := rawdb.ReadHeaderNumber(oldDB, head)
+	if number == nil {
+		fmt.Println("Failed to read head block from database: " + dirname)
+		return nil
+	}
+	maxN := *number
+	block = rawdb.ReadBlock(oldDB, head, maxN)
+	if block == nil {
+		fmt.Println("Failed to read head block number=" + strconv.Itoa(int(maxN)) + " hash=" + head.String() + " from database: " + dirname)
+		return nil
+	}
+
+	for i := uint64(1); i <= maxN; i++ {
+		fmt.Print(strconv.Itoa(int(i)) + ".")
+
+		hash = rawdb.ReadCanonicalHash(oldDB, i)
+		block := rawdb.ReadBlock(oldDB, hash, i)
+		if block == nil {
+			fmt.Println("Failed to read block number=" + strconv.Itoa(int(i)) + " from old database")
+			return nil
+		}
+		if i+1 <= maxN {
+			hash1 := rawdb.ReadCanonicalHash(oldDB, i+1)
+			block1 := rawdb.ReadBlock(oldDB, hash1, i+1)
+			if block1 == nil {
+				fmt.Println("Failed to read block number=" + strconv.Itoa(int(i+1)) + " from old database")
+				return nil
+			}
+			if keyHash != block1.KeyHash() { //for keyblock
+				keyHash = block1.KeyHash()
+				number := rawdb.ReadKeyHeaderNumber(oldDB, keyHash)
+				if number == nil {
+					fmt.Println("Failed to read key block hash=" + keyHash.String() + " from old database")
+					return nil
+				}
+				keyNumber := *number
+				keyblock := rawdb.ReadKeyBlock(oldDB, keyHash, keyNumber)
+				if keyblock == nil {
+					fmt.Println("Failed to read key block number=" + strconv.Itoa(int(keyNumber)) + " hash=" + keyHash.String() + " from old database")
+					return nil
+				}
+				if err := kbc.InsertBlock(keyblock); err != nil {
+					fmt.Println("Failed to insert key block hash=" + keyHash.String() + " from old database, error:" + err.Error())
+					return nil
+				}
+				mb := bftview.ReadCommitteeFromDB(oldDB, keyNumber, keyHash)
+				//				fmt.Println("@@key number", keyNumber, "mb", mb)
+				mb.Store0(keyblock)
+				fmt.Println("@@key number", keyNumber, "key hash", keyHash.String())
+
+				block.SetKeyblock(keyblock)
+			}
+		}
+
+		//chain.CheckState(b, block)
+		if _, err := chain.InsertBlock(block, true); err != nil {
+			e := fmt.Errorf("Failed to insert block %d error %v", i, err)
+			fmt.Println(e.Error())
+			return e
+		}
+	}
+
+	chain.Stop()
+	fmt.Println("Import succeeded!!!")
+	return nil
+}
 func exportChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")

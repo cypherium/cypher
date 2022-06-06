@@ -355,7 +355,7 @@ func deleteHeaderWithoutNumber(db ethdb.KeyValueWriter, hash common.Hash, number
 	}
 }
 
-// ReadBodyRLP retrieves the block body (transactions and uncles) in RLP encoding.
+// ReadBodyRLP retrieves the block body (transactions ) in RLP encoding.
 func ReadBodyRLP(db ethdb.Reader, hash common.Hash, number uint64) rlp.RawValue {
 	// First try to look up the data in ancient database. Extra hash
 	// comparison is necessary since ancient database only maintains
@@ -386,7 +386,7 @@ func ReadBodyRLP(db ethdb.Reader, hash common.Hash, number uint64) rlp.RawValue 
 	return nil // Can't find the data anywhere.
 }
 
-// ReadCanonicalBodyRLP retrieves the block body (transactions and uncles) for the canonical
+// ReadCanonicalBodyRLP retrieves the block body (transactions) for the canonical
 // block at number, in RLP encoding.
 func ReadCanonicalBodyRLP(db ethdb.Reader, number uint64) rlp.RawValue {
 	// If it's an ancient one, we don't need the canonical hash
@@ -645,7 +645,7 @@ func ReadBlock(db ethdb.Reader, hash common.Hash, number uint64) *types.Block {
 	if body == nil {
 		return nil
 	}
-	return types.NewBlockWithHeader(header).WithBody(body.Transactions, body.Uncles)
+	return types.NewBlockWithHeader(header).WithBody(body.Transactions)
 }
 
 // WriteBlock serializes a block into the database, header and body separately.
@@ -823,7 +823,7 @@ func ReadKeyBlock(db ethdb.Reader, hash common.Hash, number uint64) *types.KeyBl
 	if body == nil {
 		return nil
 	}
-	b := types.NewKeyBlockWithHeader(header).WithBody(body.InPubKey, body.InAddress, body.OutPubKey, body.OutAddress, body.LeaderPubKey, body.LeaderAddress).CopyMe()
+	b := types.NewKeyBlockWithHeader(header).WithBody(body.InPubKey, body.InAddress, body.OutPubKey, body.OutAddress, body.LeaderPubKey, body.LeaderAddress).CopyMe(body.Signatrue, body.Exceptions)
 	return b
 }
 
@@ -912,7 +912,7 @@ func ReadKeyBody(db ethdb.Reader, hash common.Hash, number uint64) *types.KeyBlo
 	return body
 }
 
-// ReadBodyRLP retrieves the block body (transactions and uncles) in RLP encoding.
+// ReadBodyRLP retrieves the block body (transactions) in RLP encoding.
 func ReadKeyBodyRLP(db ethdb.Reader, hash common.Hash, number uint64) rlp.RawValue {
 	data, _ := db.Get(keyBlockBodyKey(number, hash))
 	return data

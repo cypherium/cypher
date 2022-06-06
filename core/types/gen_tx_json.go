@@ -16,7 +16,7 @@ var _ = (*txdataMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
-		SenderKey    hexutil.Bytes   `json:"senderKey" gencodec:"required"`
+		SenderKey    hexutil.Bytes   `json:"senderKey"`
 		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
 		GasLimit     hexutil.Uint64  `json:"gas"      gencodec:"required"`
@@ -46,7 +46,7 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
-		SenderKey    *hexutil.Bytes  `json:"senderKey" gencodec:"required"`
+		SenderKey    *hexutil.Bytes  `json:"senderKey"`
 		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
 		GasLimit     *hexutil.Uint64 `json:"gas"      gencodec:"required"`
@@ -64,7 +64,7 @@ func (t *txdata) UnmarshalJSON(input []byte) error {
 	}
 	if dec.SenderKey != nil {
 		t.SenderKey = *dec.SenderKey
-	}	
+	}
 	if dec.AccountNonce == nil {
 		return errors.New("missing required field 'nonce' for txdata")
 	}

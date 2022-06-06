@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/cypherium/cypher/log"
 	"math/big"
 
 	"github.com/cypherium/cypher/common"
@@ -71,7 +70,7 @@ func MakeSignerRecover(config *params.ChainConfig, blockNumber, Vb *big.Int) Sig
 	chainIdMul := new(big.Int).Mul(config.ChainID, big.NewInt(2))
 	V := new(big.Int).Sub(Vb, chainIdMul)
 	V.Sub(V, big8)
-	log.Info("MakeSignerRecover", "V", V.Uint64(), "ChainID", config.ChainID)
+	//	log.Info("MakeSignerRecover", "V", V.Uint64(), "ChainID", config.ChainID)
 	if V.Cmp(big.NewInt(28)) <= 0 {
 		signer = NewEIP155Signer(config.ChainID)
 		return signer
@@ -92,7 +91,8 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 }
 
 // SignTxWithED25519 signs the transaction using the given signer and private key,using ed25519
-func SignTxWithED25519(tx *Transaction, s Signer, prv ed25519.PrivateKey, pub ed25519.PublicKey) (*Transaction, error) {
+func SignTxWithED25519(tx *Transaction, s Signer, prv ed25519.PrivateKey) (*Transaction, error) {
+	pub := prv.Public().(ed25519.PublicKey)
 	h := s.Hash(tx)
 	sig, err := crypto.SignWithED25519(h[:], prv)
 	if err != nil {
@@ -197,6 +197,7 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
+		tx.data.Version,
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
@@ -223,6 +224,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
+	//	log.Info("HomesteadSigner")
 	return recoverPlain(tx.data.SenderKey, hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
 }
 
@@ -249,6 +251,7 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
+		tx.data.Version,
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
@@ -259,21 +262,23 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
+	//	log.Info("FrontierSigner")
 	return recoverPlain(tx.data.SenderKey, fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
 }
 
 func (fs FrontierSigner) SenderWithChainId(tx *Transaction, id *big.Int) (common.Address, error) {
-	return recoverPlain(tx.data.SenderKey,fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
+	return recoverPlain(tx.data.SenderKey, fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
 }
 
 func recoverPlain(pub ed25519.PublicKey, sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
-	if pub != nil {
+	//	log.Info("@@@", "pub", pub)
+	if len(pub) > 1 {
 		r, s := R.Bytes(), S.Bytes()
 		sig := make([]byte, ed25519.SignatureSize)
 
 		copy(sig[32-len(r):32], r)
 		copy(sig[64-len(s):64], s)
-		//log.Info("ed25519 recoverPlain", "r", r, "s", s, "Vb", Vb, "pub", pub, "hash[:]", sighash[:], "sig", sig)
+		//	log.Info("ed25519 recoverPlain", "r", r, "s", s, "Vb", Vb, "pub", pub, "hash[:]", sighash[:], "sig", sig)
 
 		if ok := ed25519.Verify(pub, sighash[:], sig); !ok {
 			return common.Address{}, errors.New("Transaction verify fail")
@@ -281,9 +286,8 @@ func recoverPlain(pub ed25519.PublicKey, sighash common.Hash, R, S, Vb *big.Int,
 
 		//log.Info("ed25519 recoverPlain verify success")
 		addr := crypto.PubKeyToAddressCypherium(pub)
-		return addr, nil		
+		return addr, nil
 	}
-
 
 	if Vb.BitLen() > 8 {
 		return common.Address{}, ErrInvalidSig
@@ -312,8 +316,9 @@ func recoverPlain(pub ed25519.PublicKey, sighash common.Hash, R, S, Vb *big.Int,
 	return addr, nil
 }
 
-func recoverPlainWithChanId(pub ed25519.PublicKey,sighash common.Hash, R, S, Vb *big.Int, homestead bool, id *big.Int) (common.Address, error) {
-	if pub != nil {
+func recoverPlainWithChanId(pub ed25519.PublicKey, sighash common.Hash, R, S, Vb *big.Int, homestead bool, id *big.Int) (common.Address, error) {
+	//log.Info("@id@", "pub", pub)
+	if len(pub) > 1 {
 		r, s := R.Bytes(), S.Bytes()
 		sig := make([]byte, ed25519.SignatureSize)
 
@@ -322,12 +327,12 @@ func recoverPlainWithChanId(pub ed25519.PublicKey,sighash common.Hash, R, S, Vb 
 		//log.Info("ed25519 recoverPlain", "r", r, "s", s, "Vb", Vb, "pub", pub, "hash[:]", sighash[:], "sig", sig)
 
 		if ok := ed25519.Verify(pub, sighash[:], sig); !ok {
-			return common.Address{}, errors.New("Transaction verify fail")
+			return common.Address{}, errors.New("Transaction verify fail with chain id")
 		}
 
 		//log.Info("ed25519 recoverPlain verify success")
 		addr := crypto.PubKeyToAddressCypherium(pub)
-		return addr, nil		
+		return addr, nil
 	}
 
 	if Vb.BitLen() > 8 {

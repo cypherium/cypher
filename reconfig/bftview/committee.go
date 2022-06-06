@@ -46,7 +46,7 @@ type KeyBlockChainInterface interface {
 	CurrentCommittee() []*common.Cnode
 }
 type ServiceInterface interface {
-	Committee_OnStored(*types.KeyBlock, *Committee)
+	Committee_OnStored(*types.KeyBlock)
 	Committee_Request(kNumber uint64, hash common.Hash)
 }
 
@@ -300,7 +300,7 @@ func (committee *Committee) Store(keyblock *types.KeyBlock) bool {
 
 	ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
 	if ok && m_config.service != nil {
-		m_config.service.Committee_OnStored(keyblock, committee)
+		m_config.service.Committee_OnStored(keyblock)
 	}
 	return ok
 }
@@ -504,14 +504,14 @@ func StrToBlsPrivKey(s string) *bls.SecretKey {
 }
 
 // ReadCommittee retrieves the committee.
-func ReadCommittee(keyBlockNumber uint64, hash common.Hash) *Committee {
-	if m_config.db == nil {
-		log.Error("ReadCommittee", "db is nil", "")
+func ReadCommitteeFromDB(db ethdb.Database, number uint64, hash common.Hash) *Committee {
+	if db == nil {
+		log.Error("ReadCommitteeFromDB", "db is nil", "")
 		return nil
 	}
-	data, _ := m_config.db.Get(rawdb.CommitteeKey(keyBlockNumber, hash))
+	data, _ := db.Get(rawdb.CommitteeKey(number, hash))
 	if len(data) == 0 {
-		log.Warn("ReadCommittee", "read data is empty", "")
+		log.Warn("ReadCommitteeFromDB", "read data is empty", "")
 		return nil
 	}
 	cm := new(Committee)
@@ -520,6 +520,10 @@ func ReadCommittee(keyBlockNumber uint64, hash common.Hash) *Committee {
 		return nil
 	}
 	return cm
+}
+
+func ReadCommittee(number uint64, hash common.Hash) *Committee {
+	return ReadCommitteeFromDB(m_config.db, number, hash)
 }
 
 func WriteCommittee(keyBlockNumber uint64, hash common.Hash, cm *Committee) bool {
@@ -537,6 +541,7 @@ func WriteCommittee(keyBlockNumber uint64, hash common.Hash, cm *Committee) bool
 		log.Error("Failed to RLP encode Committee", "err", err)
 		return false
 	}
+	//	log.Info("@@", "number", keyBlockNumber, "hash", hash)
 	key := rawdb.CommitteeKey(keyBlockNumber, hash)
 	if err := m_config.db.Put(key, data); err != nil {
 		log.Error("Failed to store header", "err", err)

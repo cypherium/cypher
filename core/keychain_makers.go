@@ -48,6 +48,11 @@ func (b *KeyBlockGen) SetLeader(pubKey ed25519.PublicKey) {
 	copy(b.leaderPubKey, pubKey)
 }
 
+// SetExtra sets the extra data field of the generated block.
+func (b *KeyBlockGen) SetExtra(data []byte) {
+	b.header.Extra = data
+}
+
 // Number returns the block number of the block being generated.
 func (b *KeyBlockGen) Number() *big.Int {
 	return new(big.Int).Set(b.header.Number)
@@ -92,7 +97,7 @@ func GenerateKeyChain(config *params.ChainConfig, parent *types.KeyBlock, engine
 	}
 	blocks := make(types.KeyBlocks, n)
 	genKeyBlock := func(i int, parent *types.KeyBlock) *types.KeyBlock {
-		blockchain, _ := NewKeyBlockChain(nil, db, nil, config, engine, nil)
+		blockchain, _ := NewKeyBlockChain(db, nil, config, engine, nil, nil)
 		defer blockchain.Stop()
 
 		b := &KeyBlockGen{i: i, parent: parent, chain: blocks, keyChainReader: blockchain, config: config, engine: engine}
@@ -104,7 +109,7 @@ func GenerateKeyChain(config *params.ChainConfig, parent *types.KeyBlock, engine
 
 		if b.engine != nil {
 			block, _ := blockchain.FinalizeKeyBlock(b.header)
-			return block.CopyMe()
+			return block.CopyMe([]byte("I am signatrue"), nil)
 			//return block
 		}
 		return nil

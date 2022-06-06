@@ -72,9 +72,9 @@ var (
 	SnapshotStoragePrefix = []byte("o") // SnapshotStoragePrefix + account hash + storage hash -> storage trie value
 	codePrefix            = []byte("c") // codePrefix + code hash -> account code
 
-	preimagePrefix  = []byte("secure-key-")      // preimagePrefix + hash -> preimage
-	configPrefix    = []byte("ethereum-config-") // config prefix for the db
-	committeePrefix = []byte("cypherium-committee-")
+	preimagePrefix        = []byte("secure-key-")      // preimagePrefix + hash -> preimage
+	configPrefix          = []byte("cypherium-config-") // config prefix for the db
+	committeePrefix       = []byte("cypherium-committee-")
 	epochPrivateKeyPrefix = []byte("epoch-private-")
 
 	// Chain index prefixes (use `i` + single byte to avoid mixing data types).
@@ -82,8 +82,6 @@ var (
 
 	preimageCounter    = metrics.NewRegisteredCounter("db/preimage/total", nil)
 	preimageHitCounter = metrics.NewRegisteredCounter("db/preimage/hits", nil)
-	
-	
 
 	headKeyBlockKey            = []byte("LastKeyBlock")
 	headKeyHeaderKey           = []byte("LastKeyHeader")
@@ -91,7 +89,7 @@ var (
 	keyBlockHeaderNumberPrefix = []byte("KHN") // keyBlockHeaderNumberPrefix + hash -> num (uint64 big endian)
 	keyBlockBodyPrefix         = []byte("kbb") // keyBlockBodyPrefix + num (uint64 big endian) + hash -> block body
 	keyBlockPrefix             = []byte("kb")  // keyBlockPrefix + num (uint64 big endian) + hash -> key block
-	
+
 )
 
 const (
@@ -158,7 +156,7 @@ func headerTDKey(number uint64, hash common.Hash) []byte {
 
 // headerHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix
 func headerHashKey(number uint64) []byte {
-	return append(append(headerPrefix, encodeBlockNumber(number)...), headerHashSuffix...)
+	return append(append(keyBlockHeaderPrefix, encodeBlockNumber(number)...), headerHashSuffix...)
 }
 
 // keyHeaderHashKey = headerPrefix + num (uint64 big endian) + headerHashSuffix

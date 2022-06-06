@@ -123,7 +123,6 @@ To make \`state_t8n\` apply these, the following inputs are required:
   is done via the \`env\`.
 
 Note: the tool does not verify that e.g. the normal uncle rules apply,
-and allows e.g two uncles at the same height, or the uncle-distance. This means that
 the tool allows for negative uncle reward (distance > 8)
 
 Example:

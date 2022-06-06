@@ -225,10 +225,12 @@ func (g *GenesisKey) configOrDefault(ghash common.Hash) *params.ChainConfig {
 func (g *GenesisKey) ToBlock() *types.KeyBlock {
 
 	head := &types.KeyBlockHeader{
+		Version:    g.Version,
 		ParentHash: g.ParentHash,
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
 		Time:       g.Time,
+		Extra:      []byte(g.ExtraData),
 		Difficulty: g.Difficulty,
 		MixDigest:  g.MixHash,
 		BlockType:  types.Initialization,

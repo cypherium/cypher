@@ -336,8 +336,7 @@ func (keyS *keyService) getBadAddress() string {
 		if block == nil {
 			return ""
 		}
-		si := block.SignInfo()
-		indexs := hotstuff.MaskToExceptionIndexs(si.Exceptions, cmLen)
+		indexs := hotstuff.MaskToExceptionIndexs(block.Exceptions(), cmLen)
 		if len(indexs) > 0 {
 			for j := 0; j < len(indexs); j++ {
 				exps[indexs[j]]++

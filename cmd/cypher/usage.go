@@ -31,10 +31,11 @@ import (
 // AppHelpFlagGroups is the application flags, grouped by functionality.
 var AppHelpFlagGroups = []flags.FlagGroup{
 	{
-		Name: "ETHEREUM",
+		Name: "Cypherium",
 		Flags: []cli.Flag{
 			configFileFlag,
 			utils.DataDirFlag,
+			utils.FromDataDirFlag,
 			utils.AncientFlag,
 			utils.KeyStoreDirFlag,
 			utils.NoUSBFlag,

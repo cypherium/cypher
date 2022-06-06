@@ -17,7 +17,6 @@
 package core
 
 import (
-	"math"
 	"math/big"
 
 	"github.com/cypherium/cypher/common"
@@ -105,35 +104,40 @@ func (result *ExecutionResult) Revert() []byte {
 
 // IntrinsicGas computes the 'intrinsic gas' for a message with the given data.
 func IntrinsicGas(data []byte, contractCreation bool) (uint64, error) {
-	// Set the starting gas for the raw transaction
-	var gas uint64
-	if contractCreation {
-		gas = params.TxGasContractCreation
-	} else {
-		gas = params.TxGas
-	}
+	gas := params.TxGas //params.TxGasContractCreation
 	// Bump the required gas by the amount of transactional data
-	if len(data) > 0 {
-		// Zero and non-zero bytes are priced differently
-		var nz uint64
-		for _, byt := range data {
-			if byt != 0 {
-				nz++
+	gas += uint64(len(data)) * params.TxDataGas
+	/*
+		// Set the starting gas for the raw transaction
+		var gas uint64
+		if contractCreation {
+			gas = params.TxGasContractCreation
+		} else {
+			gas = params.TxGas
+		}
+		// Bump the required gas by the amount of transactional data
+		if len(data) > 0 {
+			// Zero and non-zero bytes are priced differently
+			var nz uint64
+			for _, byt := range data {
+				if byt != 0 {
+					nz++
+				}
 			}
-		}
-		// Make sure we don't exceed uint64 for all data combinations
-		nonZeroGas := params.TxDataNonZeroGasFrontier
-		if (math.MaxUint64-gas)/nonZeroGas < nz {
-			return 0, ErrGasUintOverflow
-		}
-		gas += nz * nonZeroGas
+			// Make sure we don't exceed uint64 for all data combinations
+			nonZeroGas := params.TxDataNonZeroGasFrontier
+			if (math.MaxUint64-gas)/nonZeroGas < nz {
+				return 0, ErrGasUintOverflow
+			}
+			gas += nz * nonZeroGas
 
-		z := uint64(len(data)) - nz
-		if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
-			return 0, ErrGasUintOverflow
+			z := uint64(len(data)) - nz
+			if (math.MaxUint64-gas)/params.TxDataZeroGas < z {
+				return 0, ErrGasUintOverflow
+			}
+			gas += z * params.TxDataZeroGas
 		}
-		gas += z * params.TxDataZeroGas
-	}
+	*/
 	return gas, nil
 }
 
@@ -255,7 +259,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
 	st.refundGas()
-	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	//st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),

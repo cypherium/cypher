@@ -3,8 +3,10 @@ package core
 import (
 	//	"bytes"
 
+	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"errors"
 	"fmt"
@@ -25,7 +27,7 @@ import (
 
 var (
 	ErrNoKeyGenesis   = errors.New("Genesis not found in key block chain")
-	ErrNoGenCommittee = errors.New("Genesis not found in db")
+	ErrNoGenCommittee = errors.New("Genesis committee not found in db")
 )
 
 type KeyBlockChain struct {
@@ -45,38 +47,43 @@ type KeyBlockChain struct {
 	currentBlock atomic.Value // Current head of the block chain
 
 	blockCache    *lru.Cache // Cache for the most recent entire blocks
+	futureBlocks  *lru.Cache // future blocks are blocks added for later processing
 	blockRLPCache *lru.Cache // Cache for the most recent entire blocks in rlp format
 
-	running int32 // running must be called atomically
+	quit    chan struct{} // blockchain quit channel
+	running int32         // running must be called atomically
 
 	// procInterrupt must be atomically called
 	procInterrupt int32          // interrupt signaler for block processing
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
-	engine consensus.Engine
-	mux    *event.TypeMux
+	Validator *KeyBlockValidator // block and state validator interface
+	engine    consensus.Engine
+	mux       *event.TypeMux
 
-	candidatePool *CandidatePool
-
-	backend Backend
+	candidatePool  *CandidatePool
+	ProcInsertDone func(*types.KeyBlock)
 }
 
 // NewKeyBlockChain returns a fully initialised key block chain using information
 // available in the database.
-func NewKeyBlockChain(cph Backend, db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, mux *event.TypeMux) (*KeyBlockChain, error) {
+func NewKeyBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, mux *event.TypeMux, candidatePool *CandidatePool) (*KeyBlockChain, error) {
 	blockCache, _ := lru.New(blockCacheLimit)
+	futureBlocks, _ := lru.New(maxFutureBlocks)
 	blockRLPCache, _ := lru.New(bodyCacheLimit)
 
 	kbc := &KeyBlockChain{
 		chainConfig:   chainConfig,
 		db:            db,
+		quit:          make(chan struct{}),
 		blockCache:    blockCache,
+		futureBlocks:  futureBlocks,
 		blockRLPCache: blockRLPCache,
 		engine:        engine,
 		mux:           mux,
-		backend:       cph,
-		candidatePool: cph.CandidatePool(),
+		candidatePool: candidatePool,
 	}
+	kbc.Validator = NewKeyBlockValidator(chainConfig, kbc)
 
 	var err error
 	kbc.khc, err = NewKeyHeaderChain(db, chainConfig, kbc.getProcInterrupt)
@@ -88,6 +95,10 @@ func NewKeyBlockChain(cph Backend, db ethdb.Database, cacheConfig *CacheConfig, 
 	if h == nil {
 		return nil, ErrNoGenesis
 	}
+
+	bftview.SetCommitteeConfig(db, nil, nil)
+	types.SetKeyBlockChainInterface(kbc)
+	//log.Info("@@", "key 0 hash", h.Hash())
 	committee0 := bftview.LoadMember(0, h.Hash(), false)
 	if committee0 == nil {
 		log.Info("NewKeyBlockChain committee0 nil")
@@ -102,6 +113,7 @@ func NewKeyBlockChain(cph Backend, db ethdb.Database, cacheConfig *CacheConfig, 
 	if err := kbc.loadLastState(); err != nil {
 		return nil, err
 	}
+	//go kbc.update()
 
 	return kbc, nil
 }
@@ -257,10 +269,21 @@ func (kbc *KeyBlockChain) InsertBlockFromData(data []byte) error {
 		log.Error("InsertBlockFromData DecodeToKeyBlock return nil")
 	}
 	_, err := kbc.insert_Chain(types.KeyBlocks{b})
-	if err != nil {
+	if err != nil && kbc.candidatePool != nil {
 		kbc.candidatePool.ClearObsolete(b.Number())
 	}
 	return err
+}
+
+func (kbc *KeyBlockChain) InsertBlock(block *types.KeyBlock) error {
+	_, err := kbc.insert_Chain(types.KeyBlocks{block})
+	log.Trace("kbc.InsertBlock..", "number", block.NumberU64(), "error", err)
+	return err
+}
+func (kbc *KeyBlockChain) InsertChain(chain types.KeyBlocks) (int, error) {
+	i, err := kbc.insert_Chain(chain)
+	log.Trace("kbc.InsertChain..", "number", chain[0].NumberU64(), "error", err)
+	return i, err
 }
 
 // InsertChain attempts to insert the given batch of key blocks in to the keyblock
@@ -300,7 +323,7 @@ func (kbc *KeyBlockChain) insert_Chain(chain types.KeyBlocks) (int, error) {
 			break
 		}
 
-		err := kbc.ValidateKeyBlock(block)
+		err := kbc.Validator.ValidateKeyBlock(block)
 		switch {
 		case err == types.ErrKnownBlock:
 			// Block and state both already known. However if the current block is below
@@ -308,6 +331,19 @@ func (kbc *KeyBlockChain) insert_Chain(chain types.KeyBlocks) (int, error) {
 			if kbc.CurrentBlockN() >= block.NumberU64() {
 				continue
 			}
+		case err == types.ErrFutureBlock:
+			// Allow up to MaxFuture second in the future blocks. If this limit is exceeded
+			// the chain is discarded and processed at a later time if given.
+			max := big.NewInt(time.Now().Unix() + maxTimeFutureBlocks)
+			if block.Time() > 0 {
+				return i, fmt.Errorf("future block: %v > %v", block.Time(), max)
+			}
+			kbc.futureBlocks.Add(block.Hash(), block)
+			continue
+
+		case err == types.ErrUnknownAncestor && kbc.futureBlocks.Contains(block.ParentHash()):
+			kbc.futureBlocks.Add(block.Hash(), block)
+			continue
 
 		case err != nil:
 			kbc.reportBlock(block, err)
@@ -319,11 +355,14 @@ func (kbc *KeyBlockChain) insert_Chain(chain types.KeyBlocks) (int, error) {
 		if err := kbc.insert(block); err != nil {
 			return i, err
 		}
+		if kbc.ProcInsertDone != nil {
+			kbc.ProcInsertDone(block)
+		}
 		lastBlock = block
 	}
 
 	if lastBlock != nil && currentBlock.Hash() != lastBlock.Hash() {
-		//go kbc.mux.Post(KeyChainHeadEvent{KeyBlock: lastBlock})
+		go kbc.mux.Post(KeyChainHeadEvent{KeyBlock: lastBlock})
 		//kbc.chainHeadFeed.Send(KeyChainHeadEvent{KeyBlock: lastBlock})
 	}
 
@@ -344,6 +383,35 @@ Error: %v
 ##############################
 `, block.Number(), block.Hash(), err))
 }
+func (kbc *KeyBlockChain) update() {
+	futureTimer := time.NewTicker(5 * time.Second)
+	defer futureTimer.Stop()
+	for {
+		select {
+		case <-futureTimer.C:
+			kbc.procFutureBlocks()
+		case <-kbc.quit:
+			return
+		}
+	}
+}
+
+func (kbc *KeyBlockChain) procFutureBlocks() {
+	blocks := make([]*types.KeyBlock, 0, kbc.futureBlocks.Len())
+	for _, hash := range kbc.futureBlocks.Keys() {
+		if block, exist := kbc.futureBlocks.Peek(hash); exist {
+			blocks = append(blocks, block.(*types.KeyBlock))
+		}
+	}
+	if len(blocks) > 0 {
+		sort.Sort(types.SortKeyBlocksByNumber(blocks))
+
+		// Insert one by one as chain insertion needs contiguous ancestry between blocks
+		for i := range blocks {
+			kbc.InsertChain(blocks[i : i+1])
+		}
+	}
+}
 
 // Stop stops the key blockchain service. If any imports are currently in progress
 // it will abort them using the procInterrupt.
@@ -353,6 +421,7 @@ func (kbc *KeyBlockChain) Stop() {
 	}
 	// Unsubscribe all subscriptions registered from blockchain
 	kbc.scope.Close()
+	close(kbc.quit)
 	atomic.StoreInt32(&kbc.procInterrupt, 1)
 
 	kbc.wg.Wait()
@@ -371,7 +440,7 @@ func (kbc *KeyBlockChain) MockBlock(amount int64) {
 	genKeyBlock := func(i int, parent *types.KeyBlock) *types.KeyBlock {
 		b := types.NewKeyBlock(makeKeyHeader(nil, parent, kbc.engine))
 
-		return b.CopyMe()
+		return b.CopyMe([]byte("I am signatrue"), nil)
 	}
 
 	blocks := make([]*types.KeyBlock, 0, amount)
@@ -388,6 +457,11 @@ func (kbc *KeyBlockChain) MockBlock(amount int64) {
 	log.Info("Mock key block", "amount", amount)
 
 	kbc.insert_Chain(blocks)
+}
+func (kbc *KeyBlockChain) AnnounceBlock(number uint64) {
+	block := kbc.GetBlockByNumber(number)
+
+	kbc.mux.Post(KeyChainHeadEvent{KeyBlock: block})
 }
 
 // GetBlockRLPByHash retrieves a block in RLP encoding from the database by hash,
@@ -439,22 +513,11 @@ func (kbc *KeyBlockChain) EncodeBlockToBytes(hash common.Hash, block *types.KeyB
 	}
 }
 
-func (kbc *KeyBlockChain) ValidateKeyBlock(block *types.KeyBlock) error {
-	blockNumber := block.NumberU64()
-	if kbc.HasBlock(block.Hash(), blockNumber) {
-		return types.ErrKnownBlock
-	}
-
-	if !kbc.HasBlock(block.ParentHash(), blockNumber-1) {
-		return types.ErrUnknownAncestor
-	}
-	return nil
-}
-
 // SubscribeChainEvent registers a subscription of ChainEvent.
 func (kbc *KeyBlockChain) SubscribeChainEvent(ch chan<- KeyChainHeadEvent) event.Subscription {
 	return kbc.scope.Track(kbc.chainHeadFeed.Subscribe(ch))
 }
+
 func (kbc *KeyBlockChain) GetCommitteeByHash(hash common.Hash) []*common.Cnode {
 	number := kbc.khc.GetBlockNumber(hash)
 	if number == nil {

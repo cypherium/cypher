@@ -252,7 +252,7 @@ func (s *netService) SendRawData(address string, msg *networkMsg) error {
 }
 
 func (s *netService) loop_iddata(address string, q *common.Queue) {
-	log.Debug("loop_iddata start", "address", address)
+	//log.Debug("loop_iddata start", "address", address)
 	si := network.NewServerIdentity(address)
 
 	s.muIdMap.Lock()
@@ -286,7 +286,7 @@ func (s *netService) loop_iddata(address string, q *common.Queue) {
 	delete(s.ackMap, address)
 	s.muIdMap.Unlock()
 
-	log.Debug("loop_iddata exit", "id", address)
+	//log.Debug("loop_iddata exit", "id", address)
 }
 
 func (s *netService) getMsgHeadInfo(msg *networkMsg) *msgHeadInfo {

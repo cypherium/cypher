@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/cypherium/cypher/common"
-	"github.com/cypherium/cypher/consensus/ethash"
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/core/state"
 	"github.com/cypherium/cypher/core/types"
@@ -77,20 +76,15 @@ func (txS *txService) tryProposalNewKeyBlock(keyblock *types.KeyBlock) ([]byte, 
 	txS.mu.Lock()
 	defer txS.mu.Unlock()
 
-	work := txS.createWork()
+	work := txS.createWork(keyblock.ParentHash())
 
 	header := work.header
 	// commit state root after all state transitions.
-	ethash.AccumulateRewards(txS.bc, work.publicState, header, nil, 0)
+	//ethash.AccumulateRewards(txS.bc, work.publicState, header, nil, 0)
 	header.Root = work.publicState.IntermediateRoot(false)
-
 	header.BlockType = types.Key_Block
-	header.Difficulty = keyblock.Difficulty()
-	header.MixDigest = keyblock.MixDigest()
-	header.Nonce = types.EncodeNonce(keyblock.Nonce())
-	header.KeyHash = keyblock.ParentHash()
 
-	block := types.NewBlock(header, nil, nil, nil, new(trie.Trie))
+	block := types.NewBlock(header, nil, nil, new(trie.Trie))
 	block.SetKeyblock(keyblock)
 
 	log.Info("Generated next keyblock", "block num", block.Number())
@@ -103,7 +97,7 @@ func (txS *txService) tryProposalNewBlock(blockType uint8) ([]byte, error) {
 	txS.mu.Lock()
 	defer txS.mu.Unlock()
 
-	work := txS.createWork()
+	work := txS.createWork(txS.kbc.CurrentBlock().Hash())
 	transactions := txS.getTransactions()
 
 	committedTxes, publicReceipts, logs := work.commitTransactions(transactions, txS.bc)
@@ -113,20 +107,10 @@ func (txS *txService) tryProposalNewBlock(blockType uint8) ([]byte, error) {
 		log.Info("Not minting a new block since there are no pending transactions")
 		return nil, fmt.Errorf("Not minting a new block since there are no pending transactions")
 	}
-
 	//txS.firePendingBlockEvents(logs)
 
 	header := work.header
-
-	var totalGas uint64
-	for i, tx := range committedTxes {
-		totalGas += publicReceipts[i].GasUsed * tx.GasPrice().Uint64()
-	}
-	// commit state root after all state transitions.
-	ethash.AccumulateRewards(txS.bc, work.publicState, header, nil, totalGas)
-	header.Root = work.publicState.IntermediateRoot(false)
-	header.KeyHash = txS.kbc.CurrentBlock().Hash()
-
+	txS.bc.Engine().Finalize(txS.bc, header, work.publicState, committedTxes, publicReceipts)
 	// update block hash since it is now available, but was not when the
 	// receipt/log of individual transactions were created:
 	headerHash := header.Hash()
@@ -134,7 +118,7 @@ func (txS *txService) tryProposalNewBlock(blockType uint8) ([]byte, error) {
 		l.BlockHash = headerHash
 	}
 
-	block := types.NewBlock(header, committedTxes, nil, publicReceipts, new(trie.Trie))
+	block := types.NewBlock(header, committedTxes, publicReceipts, new(trie.Trie))
 
 	log.Info("Generated next block", "block num", block.Number(), "num txes", txCount)
 
@@ -208,7 +192,7 @@ func (txS *txService) decideNewBlock(block *types.Block, sig []byte, mask []byte
 	}
 	block.SetSignature(sig, mask)
 	//	log.Info("decideNewBlock", "extra", block.Extra())
-	_, err := bc.InsertBlock(block)
+	_, err := bc.InsertBlock(block, false)
 	if err != nil {
 		log.Error("decideNewBlock.InsertChain", "error", err)
 		return err
@@ -270,7 +254,7 @@ func (txS *txService) updateChainPerNewHead(newBlock *types.Block) {
 }
 
 // Assumes mu is held.
-func (txS *txService) createWork() *work {
+func (txS *txService) createWork(keyHash common.Hash) *work {
 	parent := txS.bc.CurrentBlock()
 	parentNumber := parent.Number()
 
@@ -280,17 +264,18 @@ func (txS *txService) createWork() *work {
 	if parentTime >= tstamp { // Each successive block needs to be after its predecessor.
 		tstamp = parentTime + 1
 	}
-	log.Info("createWork", "parent.Difficulty()", parent.Difficulty())
+	log.Info("createWork", "keyhash", keyHash)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     parentNumber.Add(parentNumber, common.Big1),
-		Difficulty: parent.Difficulty(), //ethash.CalcDifficulty(txS.config, uint64(tstamp), parent.Header()),
-		GasLimit:   txS.cph.calcGasLimitFunc(parent),
-		GasUsed:    0,
-		Coinbase:   bftview.GetServerCoinBase(),
-		Time:       uint64(tstamp),
-	}
+		KeyHash:    keyHash,
 
+		GasLimit: txS.cph.calcGasLimitFunc(parent),
+		GasUsed:  0,
+		//		Coinbase: bftview.GetServerCoinBase(),
+		Time: uint64(tstamp),
+	}
+	log.Info("createWork", "GasLimit", header.GasLimit)
 	publicState, err := txS.bc.StateAt(parent.Root())
 	if err != nil {
 		panic(fmt.Sprint("failed to get parent state: ", err))
@@ -310,8 +295,7 @@ func (txS *txService) getTransactions() *types.TransactionsByPriceAndNonce {
 		panic(err)
 	}
 	addrTxes := txS.proposedChain.withoutProposedTxes(allAddrTxes)
-	signer := types.MakeSigner(txS.bc.Config(), txS.bc.CurrentBlock().Number())
-	return types.NewTransactionsByPriceAndNonce(signer, addrTxes)
+	return types.NewTransactionsByPriceAndNonce(txS.config, txS.bc.CurrentBlock().Number(), addrTxes)
 }
 
 // Sends-off events asynchronously.
@@ -379,9 +363,9 @@ func (env *work) commitTransactions(txes *types.TransactionsByPriceAndNonce, bc 
 func (env *work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, gp *core.GasPool) (*types.Receipt, error) {
 	publicSnapshot := env.publicState.Snapshot()
 
-	var author *common.Address
 	var vmConf vm.Config
-	publicReceipt, err := core.ApplyTransaction(env.config, bc, author, gp, env.publicState, env.header, tx, &env.header.GasUsed, vmConf)
+	publicReceipt, err := core.ApplyTransaction(env.config, bc, gp, env.publicState, env.header, tx, &env.header.GasUsed, vmConf)
+
 	if err != nil {
 		env.publicState.RevertToSnapshot(publicSnapshot)
 		return nil, err

@@ -245,7 +245,7 @@ func (ks *KeyStore) Delete(a accounts.Account, passphrase string) error {
 	// immediately afterwards.
 	a, key, err := ks.getDecryptedKey(a, passphrase)
 	if key != nil {
-		zeroKey(key.PrivateKey)
+		zeroKey(key)
 	}
 	if err != nil {
 		return err
@@ -272,6 +272,9 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 	if !found {
 		return nil, ErrLocked
 	}
+	if unlockedKey.PrivateKey25519 != nil {
+		return ed25519.Sign(unlockedKey.PrivateKey25519, hash), nil
+	}
 	// Sign the hash using plain ECDSA operations
 	return crypto.Sign(hash, unlockedKey.PrivateKey)
 }
@@ -286,7 +289,9 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	if !found {
 		return nil, ErrLocked
 	}
-
+	if unlockedKey.PrivateKey25519 != nil {
+		return types.SignTxWithED25519(tx, types.HomesteadSigner{}, unlockedKey.PrivateKey25519)
+	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
 		return types.SignTx(tx, types.NewEIP155Signer(chainID), unlockedKey.PrivateKey)
@@ -302,7 +307,12 @@ func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account, passphrase string
 	if err != nil {
 		return nil, err
 	}
-	defer zeroKey(key.PrivateKey)
+	defer zeroKey(key)
+
+	if key.PrivateKey25519 != nil {
+		return ed25519.Sign(key.PrivateKey25519, hash), nil
+	}
+
 	return crypto.Sign(hash, key.PrivateKey)
 }
 
@@ -313,7 +323,11 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	if err != nil {
 		return nil, err
 	}
-	defer zeroKey(key.PrivateKey)
+	defer zeroKey(key)
+	if key.PrivateKey25519 != nil {
+		return types.SignTxWithED25519(tx, types.HomesteadSigner{}, key.PrivateKey25519)
+	}
+
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
 		return types.SignTx(tx, types.NewEIP155Signer(chainID), key.PrivateKey)
@@ -350,9 +364,10 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 	if err != nil {
 		return err
 	}
-
-	pubKey, _, _ := crypto.EDDSAToBLS(key.PrivateKey25519)
-	log.Info("Unlock", "address", a.Address, "public key", common.HexString(pubKey))
+	if key.PrivateKey25519 != nil {
+		pubKey, _, _ := crypto.EDDSAToBLS(key.PrivateKey25519)
+		log.Info("Unlock ed25519", "address", a.Address, "public key", common.HexString(pubKey))
+	}
 
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
@@ -361,7 +376,7 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 		if u.abort == nil {
 			// The address was unlocked indefinitely, so unlocking
 			// it with a timeout would be confusing.
-			zeroKey(key.PrivateKey)
+			zeroKey(key)
 			return nil
 		}
 		// Terminate the expire goroutine and replace it below.
@@ -408,7 +423,7 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 		// because the map stores a new pointer every time the key is
 		// unlocked.
 		if ks.unlocked[addr] == u {
-			zeroKey(u.PrivateKey)
+			zeroKey(u.Key)
 			delete(ks.unlocked, addr)
 		}
 		ks.mu.Unlock()
@@ -461,8 +476,8 @@ func (ks *KeyStore) Export(a accounts.Account, passphrase, newPassphrase string)
 // Import stores the given encrypted JSON key into the key directory.
 func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (accounts.Account, error) {
 	key, err := DecryptKey(keyJSON, passphrase)
-	if key != nil && key.PrivateKey != nil {
-		defer zeroKey(key.PrivateKey)
+	if key != nil && (key.PrivateKey != nil || key.PrivateKey25519 != nil) {
+		defer zeroKey(key)
 	}
 	if err != nil {
 		return accounts.Account{}, err
@@ -523,17 +538,6 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 	return a, nil
 }
 
-// zeroKey zeroes a private key in memory.
-func zeroKey(k *ecdsa.PrivateKey) {
-	if k == nil {
-		return
-	}
-	b := k.D.Bits()
-	for i := range b {
-		b[i] = 0
-	}
-}
-
 //--ed25519--------------------------------------------------------------------------
 
 func (ks *KeyStore) GetKeyPair(account accounts.Account, passphrase string) ([]byte, []byte, error) {
@@ -545,14 +549,27 @@ func (ks *KeyStore) GetKeyPair(account accounts.Account, passphrase string) ([]b
 		return nil, nil, errors.New("the account can not decrypted by ed25519")
 
 	}
-	defer zeroKey25519(key.PrivateKey25519)
+	defer zeroKey(key)
 
 	pubKey, priKey, err := crypto.EDDSAToBLS(key.PrivateKey25519)
 	return pubKey, priKey, err
 }
 
-func zeroKey25519(k ed25519.PrivateKey) {
-	for i := range k {
-		k[i] = 0
+// zeroKey zeroes a private key in memory.
+func zeroKey(key *Key) {
+	if key.PrivateKey25519 != nil {
+		k := key.PrivateKey25519
+		for i := range k {
+			k[i] = 0
+		}
+	} else {
+		k := key.PrivateKey
+		if k == nil {
+			return
+		}
+		b := k.D.Bits()
+		for i := range b {
+			b[i] = 0
+		}
 	}
 }

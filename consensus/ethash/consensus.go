@@ -49,8 +49,6 @@ var (
 
 	errLargeBlockTime    = errors.New("timestamp too big")
 	errZeroBlockTime     = errors.New("timestamp equals parent's")
-	errTooManyUncles     = errors.New("too many uncles")
-	errDuplicateUncle    = errors.New("duplicate uncle")
 	errUncleIsAncestor   = errors.New("uncle is ancestor")
 	errDanglingUncle     = errors.New("uncle's parent is not ancestor")
 	errInvalidDifficulty = errors.New("non-positive difficulty")
@@ -196,7 +194,7 @@ func (ethash *Ethash) PrepareCandidate(chain types.KeyChainReader, candidate *ty
 	}
 
 	candidate.KeyCandidate.Difficulty = calcCandidateDifficulty(candidate.KeyCandidate.Time, parent, committeeSize)
-	log.Info("PrepareCandidate", "parent difficulty", parent.Difficulty, "current difficulty", candidate.KeyCandidate.Difficulty, "minus value", candidate.KeyCandidate.Difficulty.Int64()-parent.Difficulty.Int64(), "committeeSize", committeeSize)
+	//	log.Info("PrepareCandidate", "parent difficulty", parent.Difficulty, "current difficulty", candidate.KeyCandidate.Difficulty, "minus value", candidate.KeyCandidate.Difficulty.Int64()-parent.Difficulty.Int64(), "committeeSize", committeeSize)
 	return nil
 }
 
@@ -256,7 +254,7 @@ func (ethash *Ethash) PowMode() uint {
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
-	return header.Coinbase, nil
+	return header.Coinbase(), nil
 }
 func (ethash *Ethash) Author0(header *types.Header) (common.PublicKey25519, error) {
 	return common.PublicKey25519{}, nil
@@ -434,26 +432,37 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 
 // Finalize implements consensus.Engine, accumulating the block and uncle rewards,
 // setting the final state on the header
-func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, totalGas uint64) {
+func (ethash *Ethash) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) {
 	// Accumulate any block and uncle rewards and commit the final state root
-	accumulateRewards(chain, state, header, uncles, totalGas)
+	var totalGas, totalUsed uint64
+	// Iterate over and process the individual transactions
+	for i, tx := range txs {
+		totalUsed += receipts[i].GasUsed
+		totalGas += receipts[i].GasUsed * tx.GasPrice().Uint64()
+	}
+	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
+	if header.NumberU64() <= params.ForkFeeBlock { //for old chain block
+		totalGas = totalUsed
+	}
+
+	accumulateRewards(chain, state, header, totalGas)
 
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 }
 
 // FinalizeAndAssemble implements consensus.Engine, accumulating the block and
 // uncle rewards, setting the final state and assembling the block.
-func (ethash *Ethash) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (ethash *Ethash) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
+	// Accumulate any block and uncle rewards and commit the final state root
 	var totalGas uint64
 	for i, tx := range txs {
 		totalGas += receipts[i].GasUsed * tx.GasPrice().Uint64()
 	}
-	// Accumulate any block and uncle rewards and commit the final state root
-	accumulateRewards(chain, state, header, uncles, totalGas)
+	accumulateRewards(chain, state, header, totalGas)
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
 	// Header seems complete, assemble into a block and return
-	return types.NewBlock(header, txs, uncles, receipts, new(trie.Trie)), nil
+	return types.NewBlock(header, txs, receipts, new(trie.Trie)), nil
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
@@ -475,7 +484,7 @@ func CalcDifficulty(config *params.ChainConfig, time uint64, parent *types.Heade
 // block's time and difficulty. The calculation uses the Frontier rules.
 func calcDifficultyFrontier(time uint64, parent *types.Header) *big.Int {
 	diff := new(big.Int)
-	adjust := new(big.Int).Div(parent.Difficulty, params.DifficultyBoundDivisor)
+	adjust := new(big.Int).Div(parent.Difficulty(), params.DifficultyBoundDivisor)
 	bigTime := new(big.Int)
 	bigParentTime := new(big.Int)
 
@@ -483,9 +492,9 @@ func calcDifficultyFrontier(time uint64, parent *types.Header) *big.Int {
 	bigParentTime.SetUint64(parent.Time)
 
 	if bigTime.Sub(bigTime, bigParentTime).Cmp(params.DurationLimit) < 0 {
-		diff.Add(parent.Difficulty, adjust)
+		diff.Add(parent.Difficulty(), adjust)
 	} else {
-		diff.Sub(parent.Difficulty, adjust)
+		diff.Sub(parent.Difficulty(), adjust)
 	}
 	if diff.Cmp(params.MinimumDifficulty) < 0 {
 		diff.Set(params.MinimumDifficulty)
@@ -505,12 +514,15 @@ func calcDifficultyFrontier(time uint64, parent *types.Header) *big.Int {
 
 // AccumulateRewards credits the coinbase of the given block with the mining
 // reward. The total reward consists of the static block reward and rewards for
-// included uncles. The coinbase of each uncle block is also rewarded.
-func accumulateRewards(bc consensus.ChainHeaderReader, state *state.StateDB, header *types.Header, uncles []*types.Header, blockReward uint64) {
+// included. The coinbase of each block is also rewarded.
+func accumulateRewards(bc consensus.ChainHeaderReader, state *state.StateDB, header *types.Header, blockReward uint64) {
 	//log.Info("RewardCommites", "blockReward", blockReward)
 	if blockReward == 0 {
 		return
 	}
+
+	//	log.Info("accumulateRewards", "rewardGas", blockReward)
+
 	beNewVer := false
 	if header.Number.Uint64() > params.ForkFeeBlock {
 		beNewVer = true
@@ -525,6 +537,10 @@ func accumulateRewards(bc consensus.ChainHeaderReader, state *state.StateDB, hea
 	keyHash := pHeader.KeyHash
 	if !beNewVer && header.KeyHash != pHeader.KeyHash {
 		kheader := kbc.GetHeaderByHash(header.KeyHash)
+		if kheader == nil {
+			log.Error("RewardCommites", "not found key hash", pHeader.KeyHash)
+			return
+		}
 		if kheader.HasNewNode() {
 			kNumber := kheader.NumberU64()
 			cnodes := kbc.GetCommitteeByNumber(kNumber)
@@ -551,7 +567,7 @@ func accumulateRewards(bc consensus.ChainHeaderReader, state *state.StateDB, hea
 	var addresses []common.Address
 	mycommittee := &bftview.Committee{List: cnodes}
 	pubs := mycommittee.ToBlsPublicKeys(keyHash)
-	exceptions := hotstuff.MaskToException(pHeader.SignInfo.Exceptions, pubs, beNewVer)
+	exceptions := hotstuff.MaskToException(pHeader.Exceptions, pubs, beNewVer)
 	for i, pub := range pubs {
 		isException := false
 		for _, exp := range exceptions {
@@ -572,7 +588,7 @@ func accumulateRewards(bc consensus.ChainHeaderReader, state *state.StateDB, hea
 	}
 	n := len(addresses)
 	if n < 4 {
-		log.Error("RewardCommites", "committee number", n)
+		//log.Error("RewardCommites", "committee number", n)
 		return
 	}
 
@@ -589,9 +605,4 @@ func accumulateRewards(bc consensus.ChainHeaderReader, state *state.StateDB, hea
 			state.AddBalance(addresses[i], bigAverage)
 		}
 	}
-}
-
-// wrapper for accumulateRewards to be called by raft minter
-func AccumulateRewards(chain consensus.ChainHeaderReader, state *state.StateDB, header *types.Header, uncles []*types.Header, totalGas uint64) {
-	accumulateRewards(chain, state, header, uncles, totalGas)
 }

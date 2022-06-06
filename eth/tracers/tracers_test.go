@@ -59,7 +59,6 @@ var makeTest = function(tx, rewind) {
   delete genesis.size;
   delete genesis.transactions;
   delete genesis.transactionsRoot;
-  delete genesis.uncles;
 
   genesis.gasLimit  = genesis.gasLimit.toString();
   genesis.number    = genesis.number.toString();

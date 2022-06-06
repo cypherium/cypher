@@ -68,9 +68,9 @@ type Engine interface {
 
 	VerifyHeader(chain ChainHeaderReader, header *types.Header, seal bool) error
 	VerifyHeaders(chain ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error)
-	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, totalGas uint64)
+	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt)
 	FinalizeAndAssemble(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error)
+		receipts []*types.Receipt) (*types.Block, error)
 
 	//Seal(chain ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error)
 

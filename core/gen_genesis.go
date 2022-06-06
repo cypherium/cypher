@@ -8,7 +8,6 @@ import (
 	"math/big"
 
 	"github.com/cypherium/cypher/common"
-	"github.com/cypherium/cypher/common/hexutil"
 	"github.com/cypherium/cypher/common/math"
 	"github.com/cypherium/cypher/params"
 )
@@ -20,7 +19,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		Config     *params.ChainConfig                         `json:"config"`
 		Nonce      math.HexOrDecimal64                         `json:"nonce"`
 		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
-		ExtraData  hexutil.Bytes                               `json:"extraData"`
+		ExtraData  string                                      `json:"extraData"`
 		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    common.Hash                                 `json:"mixHash"`
@@ -29,6 +28,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		Number     math.HexOrDecimal64                         `json:"number"`
 		GasUsed    math.HexOrDecimal64                         `json:"gasUsed"`
 		ParentHash common.Hash                                 `json:"parentHash"`
+		KeyHash    common.Hash
 	}
 	var enc Genesis
 	enc.Config = g.Config
@@ -48,6 +48,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 	enc.Number = math.HexOrDecimal64(g.Number)
 	enc.GasUsed = math.HexOrDecimal64(g.GasUsed)
 	enc.ParentHash = g.ParentHash
+	enc.KeyHash = g.KeyHash
 	return json.Marshal(&enc)
 }
 
@@ -56,7 +57,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		Config     *params.ChainConfig                         `json:"config"`
 		Nonce      *math.HexOrDecimal64                        `json:"nonce"`
 		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
-		ExtraData  *hexutil.Bytes                              `json:"extraData"`
+		ExtraData  *string                                     `json:"extraData"`
 		GasLimit   *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    *common.Hash                                `json:"mixHash"`
@@ -65,6 +66,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		Number     *math.HexOrDecimal64                        `json:"number"`
 		GasUsed    *math.HexOrDecimal64                        `json:"gasUsed"`
 		ParentHash *common.Hash                                `json:"parentHash"`
+		KeyHash    *common.Hash
 	}
 	var dec Genesis
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -111,6 +113,9 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	}
 	if dec.ParentHash != nil {
 		g.ParentHash = *dec.ParentHash
+	}
+	if dec.KeyHash != nil {
+		g.KeyHash = *dec.KeyHash
 	}
 	return nil
 }

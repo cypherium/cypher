@@ -47,8 +47,22 @@ type KeyChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *KeyBlock
+	GetBlockByHash(hash common.Hash) *KeyBlock
+	GetBlockByNumber(number uint64) *KeyBlock
 
 	CurrentCommittee() []*common.Cnode
 	GetCommitteeByHash(hash common.Hash) []*common.Cnode
 	GetCommitteeByNumber(kNumber uint64) []*common.Cnode
+}
+
+var m_keyblockchain KeyChainReader
+
+func SetKeyBlockChainInterface(kbc KeyChainReader) {
+	m_keyblockchain = kbc
+}
+func getKeyBlockByHash(hash common.Hash) *KeyBlock {
+	if m_keyblockchain == nil {
+		return nil
+	}
+	return m_keyblockchain.GetBlockByHash(hash)
 }

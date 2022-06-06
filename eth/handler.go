@@ -578,25 +578,24 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
-		// Deliver them all to the downloader for queuing
-		transactions := make([][]*types.Transaction, len(request))
-		uncles := make([][]*types.Header, len(request))
+			// Deliver them all to the downloader for queuing
+			transactions := make([][]*types.Transaction, len(request))
 
-		for i, body := range request {
-			transactions[i] = body.Transactions
-			uncles[i] = body.Uncles
-		}
-		// Filter out any explicitly requested bodies, deliver the rest to the downloader
-		filter := len(transactions) > 0 || len(uncles) > 0
-		if filter {
-			transactions, uncles = pm.blockFetcher.FilterBodies(p.id, transactions, uncles, time.Now())
-		}
-		if len(transactions) > 0 || len(uncles) > 0 || !filter {
-			err := pm.downloader.DeliverBodies(p.id, transactions, uncles)
-			if err != nil {
-				log.Debug("Failed to deliver bodies", "err", err)
+			for i, body := range request {
+				transactions[i] = body.Transactions
 			}
-		}
+			// Filter out any explicitly requested bodies, deliver the rest to the downloader
+			filter := len(transactions) > 0
+			if filter {
+				transactions = pm.blockFetcher.FilterBodies(p.id, transactions, time.Now())
+			}
+			if len(transactions) > 0 || !filter {
+				err := pm.downloader.DeliverBodies(p.id, transactions)
+				if err != nil {
+					log.Debug("Failed to deliver bodies", "err", err)
+				}
+			}
+
 
 	case p.version >= eth63 && msg.Code == GetNodeDataMsg:
 		// Decode the retrieval message
@@ -720,10 +719,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		if err := msg.Decode(&request); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
 		}
-		if hash := types.CalcUncleHash(request.Block.Uncles()); hash != request.Block.UncleHash() {
-			log.Warn("Propagated block has invalid uncles", "have", hash, "exp", request.Block.UncleHash())
-			break // TODO(karalabe): return error eventually, but wait a few releases
-		}
+		//if hash := types.CalcUncleHash(request.Block.Uncles()); hash != request.Block.UncleHash() {
+		//	log.Warn("Propagated block has invalid uncles", "have", hash, "exp", request.Block.UncleHash())
+		//	break // TODO(karalabe): return error eventually, but wait a few releases
+		//}
 		if hash := types.DeriveSha(request.Block.Transactions(), new(trie.Trie)); hash != request.Block.TxHash() {
 			log.Warn("Propagated block has invalid body", "have", hash, "exp", request.Block.TxHash())
 			break // TODO(karalabe): return error eventually, but wait a few releases
