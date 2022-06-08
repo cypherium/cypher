@@ -268,6 +268,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	bc.currentBlock.Store(nilBlock)
 	bc.currentFastBlock.Store(nilBlock)
 
+	types.SetKeyBlockChainInterface(bc)
 	// Initialize the chain with ancient data if it isn't empty.
 	var txIndexBlock uint64
 
@@ -1566,9 +1567,6 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 		if len(logs) > 0 {
 			bc.logsFeed.Send(logs)
 		}
-		if bc.ProcInsertDone != nil {
-			bc.ProcInsertDone(block)
-		}
 		// In theory we should fire a ChainHeadEvent when we inject
 		// a canonical block, but sometimes we can insert a batch of
 		// canonicial blocks. Avoid firing too much ChainHeadEvents,
@@ -1918,6 +1916,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 				return it.index, err
 			}
 		}
+		if bc.ProcInsertDone != nil {
+			bc.ProcInsertDone(block)
+		}
+
 		//------------------------------------------------------------------------------------------------
 		// Update the metrics touched during block commit
 		//accountCommitTimer.Update(statedb.AccountCommits)   // Account commits are complete, we can mark them

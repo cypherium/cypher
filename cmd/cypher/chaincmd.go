@@ -477,7 +477,7 @@ func importOldChain(ctx *cli.Context) error {
 		fmt.Println("Please initialize Genesis first")
 		return nil
 	}
-
+	curentN := chain.CurrentBlockN()
 	kbc := chain.GetKeyChain()
 	bftview.SetCommitteeConfig(db, kbc, nil)
 	//-------------------------------------------------
@@ -501,8 +501,8 @@ func importOldChain(ctx *cli.Context) error {
 		fmt.Println("Failed to read head block number=" + strconv.Itoa(int(maxN)) + " hash=" + head.String() + " from database: " + dirname)
 		return nil
 	}
-
-	for i := uint64(1); i <= maxN; i++ {
+	//maxN = 12985  //9001
+	for i := uint64(curentN+1); i <= maxN; i++ {
 		fmt.Print(strconv.Itoa(int(i)) + ".")
 
 		hash = rawdb.ReadCanonicalHash(oldDB, i)
@@ -519,6 +519,7 @@ func importOldChain(ctx *cli.Context) error {
 				return nil
 			}
 			if keyHash != block1.KeyHash() { //for keyblock
+				curHash := kbc.CurrentBlock().Hash()
 				keyHash = block1.KeyHash()
 				number := rawdb.ReadKeyHeaderNumber(oldDB, keyHash)
 				if number == nil {
@@ -531,16 +532,38 @@ func importOldChain(ctx *cli.Context) error {
 					fmt.Println("Failed to read key block number=" + strconv.Itoa(int(keyNumber)) + " hash=" + keyHash.String() + " from old database")
 					return nil
 				}
-				if err := kbc.InsertBlock(keyblock); err != nil {
-					fmt.Println("Failed to insert key block hash=" + keyHash.String() + " from old database, error:" + err.Error())
-					return nil
+				var keyblocks types.KeyBlocks
+				keyblocks = append(keyblocks, keyblock)
+				for keyblock.ParentHash() != curHash {
+					khash := keyblock.ParentHash()
+					number = rawdb.ReadKeyHeaderNumber(oldDB, khash)
+					if number == nil {
+						fmt.Println("Failed to read key block hash=" + khash.String() + " from old database")
+						return nil
+					}
+					keyNumber := *number
+					keyblock = rawdb.ReadKeyBlock(oldDB, khash, keyNumber)
+					if keyblock == nil {
+						fmt.Println("Failed to read key block number=" + strconv.Itoa(int(keyNumber)) + " hash=" + khash.String() + " from old database")
+						return nil
+					}
+					keyblocks = append(keyblocks, keyblock)
 				}
-				mb := bftview.ReadCommitteeFromDB(oldDB, keyNumber, keyHash)
-				//				fmt.Println("@@key number", keyNumber, "mb", mb)
-				mb.Store0(keyblock)
+				var kbs types.KeyBlocks
+				for j := len(keyblocks)-1; j >=0; j-- {
+					keyblock = keyblocks[j]
+					if err := kbc.InsertBlock(keyblock); err != nil {
+						fmt.Println("Failed to insert key block",  keyblock.NumberU64()," from old database, error:" + err.Error())
+						return nil
+					}
+					mb := bftview.ReadCommitteeFromDB(oldDB, keyblock.NumberU64(), keyblock.Hash())
+					mb.Store0(keyblock)	
+					kbs = append(kbs,keyblock)
+				}
+
 				fmt.Println("@@key number", keyNumber, "key hash", keyHash.String())
 
-				block.SetKeyblock(keyblock)
+				block.SetKeyblocks(types.KeyBlockList{List:kbs})
 			}
 		}
 

@@ -97,7 +97,6 @@ func NewKeyBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *
 	}
 
 	bftview.SetCommitteeConfig(db, nil, nil)
-	types.SetKeyBlockChainInterface(kbc)
 	//log.Info("@@", "key 0 hash", h.Hash())
 	committee0 := bftview.LoadMember(0, h.Hash(), false)
 	if committee0 == nil {
@@ -264,13 +263,13 @@ func (kbc *KeyBlockChain) insert(block *types.KeyBlock) error {
 }
 
 func (kbc *KeyBlockChain) InsertBlockFromData(data []byte) error {
-	b := types.DecodeToKeyBlock(data)
+	b := types.DecodeToKeyBlocks(data)
 	if b == nil {
-		log.Error("InsertBlockFromData DecodeToKeyBlock return nil")
+		log.Error("InsertBlockFromData DecodeToKeyBlocks return nil")
 	}
-	_, err := kbc.insert_Chain(types.KeyBlocks{b})
+	_, err := kbc.insert_Chain(b.List)
 	if err != nil && kbc.candidatePool != nil {
-		kbc.candidatePool.ClearObsolete(b.Number())
+		kbc.candidatePool.ClearObsolete(b.List[len(b.List)-1].Number())
 	}
 	return err
 }
@@ -317,6 +316,7 @@ func (kbc *KeyBlockChain) insert_Chain(chain types.KeyBlocks) (int, error) {
 
 	// Iterate over the blocks and insert when the verifier permits
 	for i, block := range chain {
+		log.Info("insert_keyblockChain", "number", block.NumberU64())
 		// If the chain is terminating, stop processing blocks
 		if atomic.LoadInt32(&kbc.procInterrupt) == 1 {
 			log.Debug("Premature abort during key blocks processing")

@@ -85,7 +85,7 @@ func (txS *txService) tryProposalNewKeyBlock(keyblock *types.KeyBlock) ([]byte, 
 	header.BlockType = types.Key_Block
 
 	block := types.NewBlock(header, nil, nil, new(trie.Trie))
-	block.SetKeyblock(keyblock)
+	block.SetKeyblocks(types.KeyBlockList{List:types.KeyBlocks{keyblock}})
 
 	log.Info("Generated next keyblock", "block num", block.Number())
 

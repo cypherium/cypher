@@ -55,14 +55,30 @@ type KeyChainReader interface {
 	GetCommitteeByNumber(kNumber uint64) []*common.Cnode
 }
 
-var m_keyblockchain KeyChainReader
+var m_blockchain	ChainReader
 
-func SetKeyBlockChainInterface(kbc KeyChainReader) {
-	m_keyblockchain = kbc
+func SetKeyBlockChainInterface(bc ChainReader) {
+	m_blockchain = bc
 }
+
 func getKeyBlockByHash(hash common.Hash) *KeyBlock {
-	if m_keyblockchain == nil {
+	if m_blockchain == nil {
 		return nil
 	}
-	return m_keyblockchain.GetBlockByHash(hash)
+	kbc := m_blockchain.GetKeyChainReader()
+	if kbc == nil {
+		return nil
+	}
+	return kbc.GetBlockByHash(hash)
+}
+
+func GetCurrentBlockN() uint64 {
+	if m_blockchain == nil {
+		return 0
+	}
+	h := m_blockchain.CurrentHeader()
+	if h != nil {
+		return h.NumberU64()
+	}
+	return 0
 }

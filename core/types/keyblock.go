@@ -217,19 +217,24 @@ func (b *KeyBlock) EncodeToBytes() []byte {
 
 	return buff.Bytes()
 }
-func DecodeToKeyBlock(data []byte) *KeyBlock {
+
+type KeyBlockList struct {
+	List []*KeyBlock
+}
+
+func DecodeToKeyBlocks(data []byte) *KeyBlockList {
 	if data == nil || len(data) < ExtraKeyMinSize {
 		return nil
 	}
-	block := &KeyBlock{}
-	buff := bytes.NewBuffer(data)
-	c := rlp.NewStream(buff, 0)
-	err := block.DecodeRLP(c)
-	if err != nil {
-		log.Error("KeyBlock.DecodeToBlock", "error", err)
+	kbs := new(KeyBlockList)
+	if err := rlp.Decode(bytes.NewReader(data), kbs); err != nil {
+		log.Error("Invalid KeyBlockList RLP", "err", err)
 		return nil
 	}
-	return block
+	if len(kbs.List) == 0 {
+		return nil
+	}
+	return kbs
 }
 
 func (b *KeyBlock) Version() string            { return b.header.Version }

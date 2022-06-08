@@ -32,6 +32,7 @@ import (
 	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rlp"
+	"github.com/cypherium/cypher/log"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -420,11 +421,16 @@ func (b *Block) SetSignature(sig []byte, exceptions []byte) {
 	b.header.Exceptions = exceptions
 }
 
-func (b *Block) SetKeyblock(keyblock *KeyBlock) {
-	data := keyblock.EncodeToBytes()
+func (b *Block) SetKeyblocks(kbs KeyBlockList) {
+	data, err := rlp.EncodeToBytes(kbs)	//data := keyblock.EncodeToBytes()
+	if err != nil {
+		log.Error("SetKeyblocks", "error", err)
+		return
+	}
 	b.header.Extra = make([]byte, ExtraKeyOffset+len(data))
 	copy(b.header.Extra[ExtraKeyOffset:], data)
 }
+
 func (b *Block) KeyInfo() []byte {
 	if len(b.header.Extra) < ExtraKeyOffset {
 		return nil

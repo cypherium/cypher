@@ -256,10 +256,11 @@ func (s *Service) OnPropose(state []byte, extra []byte) error { //verify new blo
 			return err
 		}
 		if block.BlockType() == types.Key_Block {
-			kblock := types.DecodeToKeyBlock(block.KeyInfo())
-			if kblock == nil {
-				return fmt.Errorf("Block's extra (keyblock) is error format!")
+			kbs := types.DecodeToKeyBlocks(block.KeyInfo())
+			if kbs == nil {
+				return fmt.Errorf("Block's extra (keyblocks) is error format!")
 			}
+			kblock := kbs.List[0] //always one keyblock in new version
 			err := s.keyService.verifyKeyBlock(kblock, types.DecodeToCandidate(extra))
 			if err != nil {
 				log.Error("verify keyblock", "number", kblock.NumberU64(), "err", err)
@@ -727,19 +728,22 @@ func (s *Service) setNextLeader(isDone bool) {
 }
 
 func (s *Service) procBlockDone(block *types.Block) {
-	var keyblock *types.KeyBlock
+	var kbs *types.KeyBlockList
+	var keyblock  *types.KeyBlock
 	beKeyBlock := false
 	if block.BlockType() == types.Key_Block {
-		keyblock = types.DecodeToKeyBlock(block.KeyInfo())
+		kbs = types.DecodeToKeyBlocks(block.KeyInfo())
 	}
 
-	if keyblock != nil {
+	if kbs != nil {
 		beKeyBlock = true
-		log.Info("@KeyBlockDone", "number", keyblock.NumberU64(), "T_number", keyblock.T_Number())
-		s.updateCommittee(keyblock)
-		s.saveCommittee(keyblock)
-		s.updateCurrentView(block, keyblock, true)
-		s.keyService.clearCandidate(keyblock)
+		for _, keyblock = range kbs.List {
+			log.Info("@KeyBlockDone", "number", keyblock.NumberU64(), "T_number", keyblock.T_Number())
+			s.updateCommittee(keyblock)
+			s.saveCommittee(keyblock)
+			s.updateCurrentView(block, keyblock, true)
+			s.keyService.clearCandidate(keyblock)	
+		}
 	} else {
 		log.Info("@TxBlockDone", "number", block.NumberU64(), "keyhash", block.KeyHash())
 		s.updateCommittee(nil)

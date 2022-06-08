@@ -82,6 +82,7 @@ type netService struct {
 }
 
 func newNetService(sName, sIp string, chainConfig *params.ChainConfig, backend *ReconfigBackend, callback serviceCallback) *netService {
+	log.Info("newNetService","sIp",sIp)
 	registerService := func(c *rnet.Context) (rnet.Service, error) {
 		s := &netService{ServiceProcessor: rnet.NewServiceProcessor(c)}
 		s.RegisterProcessorFunc(network.RegisterMessage(&networkMsg{}), s.handleNetworkMsgAck)

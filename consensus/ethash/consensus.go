@@ -376,8 +376,14 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 	//		return consensus.ErrFutureBlock
 	//	}
 	//}
-	if header.Time <= parent.Time {
-		return errOlderBlockTime
+	if header.NumberU64() >= params.ForkNewVerBlock {
+		if header.Time <= parent.Time {
+			return errOlderBlockTime
+		}
+	}else {
+		if header.Time < parent.Time {
+			return errOlderBlockTime
+		}
 	}
 	/*?? should verify the refer's keyblock difficulty
 	// Verify the block's difficulty based on its timestamp and parent's difficulty

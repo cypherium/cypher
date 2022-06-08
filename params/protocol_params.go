@@ -33,7 +33,7 @@ const (
 	CheckBackNumber        = 10
 	CollectVoteInfoTimeout = 5 * time.Second
 	ForkFeeBlock           = 13270
-	ForkNewVerBlock        = 279
+	ForkNewVerBlock        = 12345678
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// these are original values from upstream Geth, used in ethash consensus
