@@ -50,7 +50,7 @@ type Transaction struct {
 }
 
 type txdata struct {
-	Version      uint64          `json:"version"  gencodec:"required"`
+	Version      uint64          `json:"version"    gencodec:"required"`
 	SenderKey    []byte          `json:"senderKey"`
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
@@ -464,3 +464,62 @@ func (m Message) Gas() uint64          { return m.gasLimit }
 func (m Message) Nonce() uint64        { return m.nonce }
 func (m Message) Data() []byte         { return m.data }
 func (m Message) CheckNonce() bool     { return m.checkNonce }
+//=============================================================================================
+type Transaction0 struct {
+	data txdata0    // Consensus contents of a transaction
+	time time.Time // Time first seen locally (spam avoidance)
+
+	// caches
+	hash atomic.Value
+	size atomic.Value
+	from atomic.Value
+}
+
+type txdata0 struct {
+	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
+	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
+	GasLimit     uint64          `json:"gas"      gencodec:"required"`
+	Recipient    *common.Address `json:"to"       rlp:"nil"` // nil means contract creation
+	Amount       *big.Int        `json:"value"    gencodec:"required"`
+	Payload      []byte          `json:"input"    gencodec:"required"`
+
+	// Signature values
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+// EncodeRLP implements rlp.Encoder
+func (tx *Transaction0) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, &tx.data)
+}
+
+// DecodeRLP implements rlp.Decoder
+func (tx *Transaction0) DecodeRLP(s *rlp.Stream) error {
+	_, size, _ := s.Kind()
+	err := s.Decode(&tx.data)
+	if err == nil {
+		tx.size.Store(common.StorageSize(rlp.ListSize(size)))
+		tx.time = time.Now()
+	}
+	return err
+}
+func (tx *Transaction0) ToTransaction() *Transaction {
+	x := new(Transaction)
+	x.time = tx.time
+	x.data.AccountNonce = tx.data.AccountNonce
+	x.data.Price = tx.data.Price
+	x.data.GasLimit = tx.data.GasLimit
+	x.data.Recipient = tx.data.Recipient
+	x.data.Amount = tx.data.Amount
+	x.data.Payload = tx.data.Payload
+	x.data.V = tx.data.V
+	x.data.R = tx.data.R
+	x.data.S = tx.data.S
+	x.data.Hash = tx.data.Hash
+	return x
+}
+

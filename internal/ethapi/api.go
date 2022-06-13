@@ -1839,11 +1839,15 @@ func (s *PublicTransactionPoolAPI) AutoTransaction(ctx context.Context, run int,
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
-	tx := new(types.Transaction)
-	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+tx := new(types.Transaction)
+if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+	tx0 := new(types.Transaction0)
+	if err := rlp.DecodeBytes(encodedTx, tx0); err != nil {
 		return common.Hash{}, err
 	}
-	return SubmitTransaction(ctx, s.b, tx, true)
+	tx = tx0.ToTransaction()
+}
+return SubmitTransaction(ctx, s.b, tx, true)
 }
 
 // Sign calculates an ECDSA signature for:

@@ -25,6 +25,7 @@ import (
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/params"
+	"github.com/cypherium/cypher/log"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -167,6 +168,7 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 var big8 = big.NewInt(8)
 
 func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
+	log.Info("EIP155Signer")
 	if !tx.Protected() {
 		return HomesteadSigner{}.Sender(tx)
 	}
@@ -175,7 +177,6 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	}
 	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 	V.Sub(V, big8)
-
 	return recoverPlain(tx.data.SenderKey, s.Hash(tx), tx.data.R, tx.data.S, V, true)
 }
 
@@ -196,8 +197,20 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
+	if len(tx.data.SenderKey) > 0 {
+		return rlpHash([]interface{}{
+			tx.data.Version,
+			tx.data.AccountNonce,
+			tx.data.Price,
+			tx.data.GasLimit,
+			tx.data.Recipient,
+			tx.data.Amount,
+			tx.data.Payload,
+			s.chainId, uint(0), uint(0),
+		})	
+	}
+
 	return rlpHash([]interface{}{
-		tx.data.Version,
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
@@ -224,7 +237,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	//	log.Info("HomesteadSigner")
+	log.Info("HomesteadSigner")
 	return recoverPlain(tx.data.SenderKey, hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
 }
 
@@ -262,7 +275,7 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
-	//	log.Info("FrontierSigner")
+	log.Info("FrontierSigner")
 	return recoverPlain(tx.data.SenderKey, fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
 }
 
