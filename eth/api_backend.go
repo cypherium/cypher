@@ -26,7 +26,7 @@ import (
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/consensus"
 	"github.com/cypherium/cypher/core"
-	"github.com/cypherium/cypher/core/bloombits"
+//	"github.com/cypherium/cypher/core/bloombits"
 	"github.com/cypherium/cypher/core/rawdb"
 	"github.com/cypherium/cypher/core/state"
 	"github.com/cypherium/cypher/core/types"
@@ -340,7 +340,7 @@ func (b *EthAPIBackend) RPCGasCap() uint64 {
 func (b *EthAPIBackend) RPCTxFeeCap() float64 {
 	return b.eth.config.RPCTxFeeCap
 }
-
+/*
 func (b *EthAPIBackend) BloomStatus() (uint64, uint64) {
 	sections, _, _ := b.eth.bloomIndexer.Sections()
 	return params.BloomBitsBlocks, sections
@@ -351,7 +351,7 @@ func (b *EthAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.Ma
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
 }
-
+*/
 func (b *EthAPIBackend) CandidatePool() *core.CandidatePool {
 	return b.eth.CandidatePool()
 }

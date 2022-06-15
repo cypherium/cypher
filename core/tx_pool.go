@@ -180,7 +180,7 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	AccountQueue: 64,
 	GlobalQueue:  1024,
 
-	Lifetime: 3 * time.Hour,
+	Lifetime: 1 * time.Hour,
 
 	TransactionSizeLimit: 64,
 	MaxCodeSize:          24,

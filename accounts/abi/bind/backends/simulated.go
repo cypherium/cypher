@@ -781,11 +781,11 @@ func (fb *filterBackend) SubscribePendingLogsEvent(ch chan<- []*types.Log) event
 	return nullSubscription()
 }
 
-func (fb *filterBackend) BloomStatus() (uint64, uint64) { return 4096, 0 }
+//func (fb *filterBackend) BloomStatus() (uint64, uint64) { return 4096, 0 }
 
-func (fb *filterBackend) ServiceFilter(ctx context.Context, ms *bloombits.MatcherSession) {
-	panic("not supported")
-}
+//func (fb *filterBackend) ServiceFilter(ctx context.Context, ms *bloombits.MatcherSession) {
+//	panic("not supported")
+//}
 
 func (fb *filterBackend) AccountExtraDataStateGetterByNumber(context.Context, rpc.BlockNumber) (vm.AccountExtraDataStateGetter, error) {
 	panic("not supported")

@@ -1,2 +1,3 @@
 localChaindb/
 genesisLocal.json
+cmd/tools/

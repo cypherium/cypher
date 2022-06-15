@@ -35,14 +35,14 @@ import (
 	"github.com/cypherium/cypher/consensus/ethash"
 
 	"github.com/cypherium/cypher/core"
-	"github.com/cypherium/cypher/core/bloombits"
+//	"github.com/cypherium/cypher/core/bloombits"
 	"github.com/cypherium/cypher/core/rawdb"
 	"github.com/cypherium/cypher/core/types"
 	"github.com/cypherium/cypher/core/vm"
 
 	//	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/eth/downloader"
-	"github.com/cypherium/cypher/eth/filters"
+//	"github.com/cypherium/cypher/eth/filters"
 	"github.com/cypherium/cypher/eth/gasprice"
 	"github.com/cypherium/cypher/ethdb"
 	"github.com/cypherium/cypher/event"
@@ -83,8 +83,8 @@ type Ethereum struct {
 	engine         consensus.Engine
 	accountManager *accounts.Manager
 
-	bloomRequests     chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
-	bloomIndexer      *core.ChainIndexer             // Bloom indexer operating during block imports
+//	bloomRequests     chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
+//	bloomIndexer      *core.ChainIndexer             // Bloom indexer operating during block imports
 	closeBloomHandler chan struct{}
 
 	APIBackend *EthAPIBackend
@@ -165,8 +165,8 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		networkID:                       config.NetworkId,
 		gasPrice:                        config.Miner.GasPrice,
 		etherbase:                       config.Miner.Etherbase,
-		bloomRequests:                   make(chan chan *bloombits.Retrieval),
-		bloomIndexer:                    NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
+//		bloomRequests:                   make(chan chan *bloombits.Retrieval),
+//		bloomIndexer:                    NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 		p2pServer:                       stack.Server(),
 		consensusServicePendingLogsFeed: new(event.Feed),
 		extIP: extIP,
@@ -219,7 +219,7 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		eth.blockchain.SetHead(compat.RewindTo)
 		rawdb.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
-	eth.bloomIndexer.Start(eth.blockchain)
+//	eth.bloomIndexer.Start(eth.blockchain)
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = stack.ResolvePath(config.TxPool.Journal)
@@ -327,11 +327,12 @@ func (s *Ethereum) APIs() []rpc.API {
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
-		}, {
+	/*	}, {
 			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.APIBackend, false),
 			Public:    true,
+	*/			
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
@@ -545,7 +546,7 @@ func (s *Ethereum) NetVersion() uint64                               { return s.
 func (s *Ethereum) Downloader() *downloader.Downloader               { return s.protocolManager.downloader }
 func (s *Ethereum) Synced() bool                                     { return atomic.LoadUint32(&s.protocolManager.acceptTxs) == 1 }
 func (s *Ethereum) ArchiveMode() bool                                { return s.config.NoPruning }
-func (s *Ethereum) BloomIndexer() *core.ChainIndexer                 { return s.bloomIndexer }
+//func (s *Ethereum) BloomIndexer() *core.ChainIndexer                 { return s.bloomIndexer }
 func (s *Ethereum) CandidatePool() *core.CandidatePool               { return s.candidatePool }
 func (s *Ethereum) ExtIP() net.IP                                    { return s.extIP }
 func (s *Ethereum) PublicKey() ed25519.PublicKey                     { return s.miner.GetPubKey() }
@@ -569,7 +570,7 @@ func (s *Ethereum) Start() error {
 	s.startEthEntryUpdate(s.p2pServer.LocalNode())
 
 	// Start the bloom bits servicing goroutines
-	s.startBloomHandlers(params.BloomBitsBlocks)
+//	s.startBloomHandlers(params.BloomBitsBlocks)
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := s.p2pServer.MaxPeers
@@ -591,7 +592,7 @@ func (s *Ethereum) Stop() error {
 	s.protocolManager.Stop()
 
 	// Then stop everything else.
-	s.bloomIndexer.Close()
+//	s.bloomIndexer.Close()
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
 	s.miner.Stop()

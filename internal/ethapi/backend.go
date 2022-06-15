@@ -26,7 +26,7 @@ import (
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/consensus"
 	"github.com/cypherium/cypher/core"
-	"github.com/cypherium/cypher/core/bloombits"
+//	"github.com/cypherium/cypher/core/bloombits"
 	"github.com/cypherium/cypher/core/state"
 	"github.com/cypherium/cypher/core/types"
 	"github.com/cypherium/cypher/core/vm"
@@ -81,9 +81,9 @@ type Backend interface {
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 
 	// Filter API
-	BloomStatus() (uint64, uint64)
+//	BloomStatus() (uint64, uint64)
 	GetLogs(ctx context.Context, blockHash common.Hash) ([][]*types.Log, error)
-	ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
+//	ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 	SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription
 	SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription
