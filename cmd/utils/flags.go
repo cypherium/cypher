@@ -1638,7 +1638,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	switch {
 	case ctx.GlobalBool(LegacyTestnetFlag.Name) || ctx.GlobalBool(RopstenFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 16165
+			cfg.NetworkId = 16163
 		}
 		cfg.Genesis = core.DefaultRopstenGenesisBlock()
 		setDNSDiscoveryDefaults(cfg, params.RopstenGenesisHash)
