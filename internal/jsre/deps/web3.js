@@ -5325,7 +5325,7 @@ var methods = function () {
         params: 2,
         inputFormatter: [formatters.inputBlockNumberFormatter, utils.toHex],
         outputFormatter: formatters.outputBlockFormatter,
-
+      });
       var getKeyBlockByHash = new Method({
         name: 'getKeyBlockByHash',
         call: 'eth_getKeyBlockByHash',
