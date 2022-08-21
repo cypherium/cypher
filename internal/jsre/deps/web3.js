@@ -3851,7 +3851,7 @@ var outputBlockFormatter = function(block) {
     var outputKeyBlockFormatter = function(block) {
       block.difficulty = utils.toBigNumber(block.difficulty);
       if(block.number !== null)
-        block.number = utils.toDecimal(block.number);
+        block.number = utils.toBigNumber(block.number);
       return block;
     };
 
