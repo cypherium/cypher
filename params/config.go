@@ -20,10 +20,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/log"
-	"math/big"
 )
 
 // Genesis hashes to enforce below configs on.
@@ -449,7 +450,7 @@ func (c *ChainConfig) IsEIP150(num *big.Int) bool {
 
 // IsEIP155 returns whether num is either equal to the EIP155 fork block or greater.
 func (c *ChainConfig) IsEIP155(num *big.Int) bool {
-	log.Info("IsEIP155", "c.ChainID", c.ChainID, "c.EIP155Block", c.EIP155Block)
+	//log.Info("IsEIP155", "c.ChainID", c.ChainID, "c.EIP155Block", c.EIP155Block)
 	return isForked(c.EIP155Block, num)
 }
 
