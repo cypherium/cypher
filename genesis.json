@@ -1,6 +1,6 @@
 {
   "config": {
-    "chainId": 16163,
+    "chainId": 16164,
     "committee":{
       "0": {
         "address": "119.8.149.6:7100",
