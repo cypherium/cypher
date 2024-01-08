@@ -1706,7 +1706,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 			cfg.Miner.GasPrice = big.NewInt(1)
 		}
 	default:
-		if cfg.NetworkId == 16162 {
+		if cfg.NetworkId == 16166 {
 			setDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
 		}
 	}
