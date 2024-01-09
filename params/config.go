@@ -20,9 +20,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/crypto"
-	"math/big"
 )
 
 // Genesis hashes to enforce below configs on.
@@ -36,26 +37,25 @@ var TrustedCheckpoints = map[common.Hash]*TrustedCheckpoint{
 }
 
 var (
-	MainnetChainConfig = &ChainConfig{big.NewInt(1337), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, new(EthashConfig), nil, nil, false, 32, 35, big.NewInt(0), nil, nil, "", false}
+	MainnetChainConfig = &ChainConfig{big.NewInt(16166), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, new(EthashConfig), nil, nil, false, 32, 35, big.NewInt(0), nil, nil, "", false}
 
-	/*
-	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(16162),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      false,
-		EIP150Block:         nil,
-		EIP150Hash:          common.Hash{},
-		EIP155Block:         big.NewInt(ForkNewVerBlock),
-		EIP158Block:         nil,
-		ByzantiumBlock:      nil,
-		ConstantinopleBlock: nil,
-		PetersburgBlock:     nil,
-		IstanbulBlock:       nil,
-		MuirGlacierBlock:    nil,
-		Ethash:              new(EthashConfig),
-	}
-*/
+	// MainnetChainConfig = &ChainConfig{
+	// 	ChainID:             big.NewInt(16166),
+	// 	HomesteadBlock:      big.NewInt(0),
+	// 	DAOForkBlock:        big.NewInt(0),
+	// 	DAOForkSupport:      false,
+	// 	EIP150Block:         nil,
+	// 	EIP150Hash:          common.Hash{},
+	// 	EIP155Block:         big.NewInt(0),
+	// 	EIP158Block:         nil,
+	// 	ByzantiumBlock:      nil,
+	// 	ConstantinopleBlock: nil,
+	// 	PetersburgBlock:     nil,
+	// 	IstanbulBlock:       nil,
+	// 	MuirGlacierBlock:    nil,
+	// 	Ethash:              new(EthashConfig),
+	// }
+
 	// RinkebyChainConfig contains the chain parameters to run a node on the Rinkeby test network.
 	RinkebyChainConfig = &ChainConfig{
 		ChainID:             big.NewInt(4),

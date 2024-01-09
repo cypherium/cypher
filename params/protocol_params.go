@@ -32,8 +32,8 @@ const (
 	KeyBlock_Reward        = 1e+18 // Block reward in wei for successfully mining a block
 	CheckBackNumber        = 10
 	CollectVoteInfoTimeout = 5 * time.Second
-	ForkFeeBlock           = 13270
-	ForkNewVerBlock        = 201983
+	ForkFeeBlock           = 1
+	ForkNewVerBlock        = 1
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// these are original values from upstream Geth, used in ethash consensus
