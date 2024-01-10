@@ -56,7 +56,20 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
-	MainnetChainConfig = &ChainConfig{big.NewInt(16166), big.NewInt(0), nil, false, big.NewInt(0), common.Hash{}, big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), big.NewInt(0), nil, nil, nil, new(EthashConfig), nil, nil, false, 32, 35, big.NewInt(0), nil, nil, "", false}
+	MainnetChainConfig = &ChainConfig{
+		HomesteadBlock:      big.NewInt(115),
+		DAOForkBlock:        big.NewInt(192),
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(246),
+		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
+		EIP155Block:         big.NewInt(267),
+		EIP158Block:         big.NewInt(267),
+		ByzantiumBlock:      big.NewInt(437),
+		ConstantinopleBlock: big.NewInt(728),
+		PetersburgBlock:     big.NewInt(728),
+		IstanbulBlock:       big.NewInt(906),
+		MuirGlacierBlock:    big.NewInt(920),
+		Ethash:              new(EthashConfig)}
 
 	// MainnetTrustedCheckpoint contains the light client trusted checkpoint for the main network.
 	MainnetTrustedCheckpoint = &TrustedCheckpoint{
