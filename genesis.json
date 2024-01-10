@@ -129,11 +129,10 @@
       "balance": "600000000000000000000000000"
     }
   },
-  "difficulty" : "0x5ff01",
-  "gasLimit"   : "0x1cfcfce",
-  "nonce"      : "0x0671e756997186e2",
+  "difficulty" : "0x41F",
+  "gasLimit"   : "0xE000000000",
+  "nonce"      : "0x0",
   "mixHash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
   "parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
-  "timestamp"  : "0x659ae440",
-  "extraData"  : "IMF, World Bank and BIS in first 'tokenisation' collaboration"
+  "timestamp"  : "0x00"
 }
