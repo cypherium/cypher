@@ -29,7 +29,7 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xd26d501bfc4ead95a157b049f252e92ac72a1d8404bb5f2dbc0c94f54671c88f")
+	MainnetGenesisHash = common.HexToHash("0xe077f2846ef873cda3f8829f6a8b7e7ad3819ff8d7ed95510575a9a77cf3cd1e")
 	RopstenGenesisHash = common.HexToHash("0x1d2bc30c28ad041bc4e426dfe92327d5dff58d442d671106e32309d4e374bd85")
 	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
 	GoerliGenesisHash  = common.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
@@ -57,6 +57,7 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
+		ChainID:             big.NewInt(16166),
 		HomesteadBlock:      big.NewInt(115),
 		DAOForkBlock:        big.NewInt(192),
 		DAOForkSupport:      true,
