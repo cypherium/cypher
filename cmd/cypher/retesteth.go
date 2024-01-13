@@ -107,7 +107,7 @@ type RetestethAPI struct {
 	db            state.Database
 	chainConfig   *params.ChainConfig
 	author        common.Address
-	extraData     []byte
+	extraData     string
 	genesisHash   common.Hash
 	engine        *NoRewardEngine
 	blockchain    *core.BlockChain
@@ -153,7 +153,7 @@ type CParamsGenesis struct {
 	Author     common.Address        `json:"author"`
 	Timestamp  math.HexOrDecimal64   `json:"timestamp"`
 	ParentHash common.Hash           `json:"parentHash"`
-	ExtraData  hexutil.Bytes         `json:"extraData"`
+	ExtraData  string                `json:"extraData"`
 	GasLimit   math.HexOrDecimal64   `json:"gasLimit"`
 }
 
@@ -495,7 +495,7 @@ func (api *RetestethAPI) mineBlock() error {
 		ParentHash: parent.Hash(),
 		Number:     big.NewInt(int64(number + 1)),
 		GasLimit:   gasLimit,
-		Extra:      api.extraData,
+		Extra:      []byte(api.extraData),
 		Time:       timestamp,
 	}
 	header.Coinbase = api.author

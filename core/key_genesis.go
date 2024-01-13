@@ -230,6 +230,7 @@ func (g *GenesisKey) ToBlock() *types.KeyBlock {
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
 		Time:       g.Time,
+
 		Difficulty: g.Difficulty,
 		MixDigest:  g.MixHash,
 		BlockType:  types.Initialization,

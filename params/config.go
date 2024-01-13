@@ -24,7 +24,6 @@ import (
 
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/crypto"
-	"github.com/cypherium/cypher/log"
 )
 
 // Genesis hashes to enforce below configs on.
@@ -431,49 +430,41 @@ func (c *ChainConfig) IsValid() error {
 
 // IsHomestead returns whether num is either equal to the homestead block or greater.
 func (c *ChainConfig) IsHomestead(num *big.Int) bool {
-	log.Info("IsHomestead", "c.ChainID", c.ChainID, "c.HomesteadBlock", c.HomesteadBlock)
 	return isForked(c.HomesteadBlock, num)
 }
 
 // IsDAOFork returns whether num is either equal to the DAO fork block or greater.
 func (c *ChainConfig) IsDAOFork(num *big.Int) bool {
-	log.Info("IsDAOFork", "c.ChainID", c.ChainID, "c.DAOForkBlock", c.DAOForkBlock)
 	return isForked(c.DAOForkBlock, num)
 }
 
 // IsEIP150 returns whether num is either equal to the EIP150 fork block or greater.
 func (c *ChainConfig) IsEIP150(num *big.Int) bool {
-	log.Info("IsEIP150", "c.ChainID", c.ChainID, "c.EIP150Block", c.EIP150Block)
 	return isForked(c.EIP150Block, num)
 }
 
 // IsEIP155 returns whether num is either equal to the EIP155 fork block or greater.
 func (c *ChainConfig) IsEIP155(num *big.Int) bool {
-	//log.Info("IsEIP155", "c.ChainID", c.ChainID, "c.EIP155Block", c.EIP155Block)
 	return isForked(c.EIP155Block, num)
 }
 
 // IsEIP158 returns whether num is either equal to the EIP158 fork block or greater.
 func (c *ChainConfig) IsEIP158(num *big.Int) bool {
-	log.Info("IsEIP158", "c.ChainID", c.ChainID, "c.EIP158Block", c.EIP158Block)
 	return isForked(c.EIP158Block, num)
 }
 
 // IsByzantium returns whether num is either equal to the Byzantium fork block or greater.
 func (c *ChainConfig) IsByzantium(num *big.Int) bool {
-	log.Info("IsByzantium", "c.ChainID", c.ChainID, "c.ByzantiumBlock", c.ByzantiumBlock)
 	return isForked(c.ByzantiumBlock, num)
 }
 
 // IsConstantinople returns whether num is either equal to the Constantinople fork block or greater.
 func (c *ChainConfig) IsConstantinople(num *big.Int) bool {
-	log.Info("IsConstantinople", "c.ChainID", c.ChainID, "c.ConstantinopleBlock", c.ConstantinopleBlock)
 	return isForked(c.ConstantinopleBlock, num)
 }
 
 // IsMuirGlacier returns whether num is either equal to the Muir Glacier (EIP-2384) fork block or greater.
 func (c *ChainConfig) IsMuirGlacier(num *big.Int) bool {
-	log.Info("IsMuirGlacier", "c.ChainID", c.ChainID, "c.MuirGlacierBlock", c.MuirGlacierBlock)
 	return isForked(c.MuirGlacierBlock, num)
 }
 
@@ -481,25 +472,21 @@ func (c *ChainConfig) IsMuirGlacier(num *big.Int) bool {
 // - equal to or greater than the PetersburgBlock fork block,
 // - OR is nil, and Constantinople is active
 func (c *ChainConfig) IsPetersburg(num *big.Int) bool {
-	log.Info("IsPetersburg", "c.ChainID", c.ChainID, "c.PetersburgBlock", c.PetersburgBlock)
 	return isForked(c.PetersburgBlock, num) || c.PetersburgBlock == nil && isForked(c.ConstantinopleBlock, num)
 }
 
 // IsIstanbul returns whether num is either equal to the Istanbul fork block or greater.
 func (c *ChainConfig) IsIstanbul(num *big.Int) bool {
-	log.Info("IsIstanbul", "c.ChainID", c.ChainID, "c.IstanbulBlock", c.IstanbulBlock)
 	return isForked(c.IstanbulBlock, num)
 }
 
 // IsYoloV1 returns whether num is either equal to the YoloV1 fork block or greater.
 func (c *ChainConfig) IsYoloV1(num *big.Int) bool {
-	log.Info("IsYoloV1", "c.ChainID", c.ChainID, "c.YoloV1Block", c.YoloV1Block)
 	return isForked(c.YoloV1Block, num)
 }
 
 // IsEWASM returns whether num represents a block number after the EWASM fork
 func (c *ChainConfig) IsEWASM(num *big.Int) bool {
-	log.Info("IsEWASM", "c.ChainID", c.ChainID, "c.EWASMBlock", c.EWASMBlock)
 	return isForked(c.EWASMBlock, num)
 }
 

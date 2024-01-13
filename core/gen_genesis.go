@@ -8,7 +8,6 @@ import (
 	"math/big"
 
 	"github.com/cypherium/cypher/common"
-	"github.com/cypherium/cypher/common/hexutil"
 	"github.com/cypherium/cypher/common/math"
 	"github.com/cypherium/cypher/params"
 )
@@ -20,7 +19,7 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 		Config     *params.ChainConfig                         `json:"config"`
 		Nonce      math.HexOrDecimal64                         `json:"nonce"`
 		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
-		ExtraData  hexutil.Bytes                               `json:"extraData"`
+		ExtraData  string                                      `json:"extraData"`
 		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    common.Hash                                 `json:"mixHash"`
@@ -56,7 +55,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		Config     *params.ChainConfig                         `json:"config"`
 		Nonce      *math.HexOrDecimal64                        `json:"nonce"`
 		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
-		ExtraData  *hexutil.Bytes                              `json:"extraData"`
+		ExtraData  *string                                     `json:"extraData"`
 		GasLimit   *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
 		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
 		Mixhash    *common.Hash                                `json:"mixHash"`
