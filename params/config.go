@@ -28,7 +28,7 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0x53c8ea4b3a667f783ae11ff82b42f66522782a2f4188e3bc30e1d2893c0c9119")
+	MainnetGenesisHash = common.HexToHash("0x7694178f823b0f9c8665c752b245245fbaa65f9582d922fca11683f329e5fa15")
 	RopstenGenesisHash = common.HexToHash("0x1d2bc30c28ad041bc4e426dfe92327d5dff58d442d671106e32309d4e374bd85")
 	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
 	GoerliGenesisHash  = common.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
@@ -56,19 +56,19 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(16166),
-		HomesteadBlock:      big.NewInt(115),
-		DAOForkBlock:        big.NewInt(192),
+		ChainID:             big.NewInt(0),
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(246),
+		EIP150Block:         big.NewInt(0),
 		EIP150Hash:          common.HexToHash("0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0"),
-		EIP155Block:         big.NewInt(267),
-		EIP158Block:         big.NewInt(267),
-		ByzantiumBlock:      big.NewInt(437),
-		ConstantinopleBlock: big.NewInt(728),
-		PetersburgBlock:     big.NewInt(728),
-		IstanbulBlock:       big.NewInt(906),
-		MuirGlacierBlock:    big.NewInt(920),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
 		Ethash:              new(EthashConfig)}
 
 	// MainnetTrustedCheckpoint contains the light client trusted checkpoint for the main network.
