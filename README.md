@@ -13,9 +13,9 @@ To build the source,you need to install go1.18.1 language.
 wget https://dl.google.com/go/go1.18.1.linux-amd64.tar.gz
 tar -C /usr/local -zxvf go1.18.1.linux-amd64.tar.gz
 go env -w GO111MODULE=off
- ``` 
+ ```
+Bls crypto gmplib 
 --
-Bls crypto gmplib
  ``` 
 apt-get update && apt-get install -y gcc cmake libssl-dev openssl libgmp-dev bzip2 m4 build-essential git curl gcc libc-dev wget texinfo
 
