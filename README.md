@@ -62,9 +62,11 @@ Download repository
     ```
  #### 2. Open the terminal and clone repository:
  ```
+  mkdir -p $GOPATH/src/github.com/cypherium
+  cd $GOPATH/src/github.com/cypherium
   git clone https://github.com/cypherium/cypher.git
   cd cypher
-  ls
+  cp -rf crypto/bls/lib/linux/* crypto/bls/lib/
   make cypher
  ```
 Tips:according to you system,please copy `./crypto/bls/lib/yoursystem/*` to `./crypto/bls/lib/` for bls library. such as:
