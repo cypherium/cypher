@@ -67,8 +67,10 @@ Download repository
   ls
   make cypher
  ```
-Tips:according to you system,please copy `./crypto/bls/lib/yoursystem/*` to `./crypto/bls/lib/` for bls library.
-
+Tips:according to you system,please copy `./crypto/bls/lib/yoursystem/*` to `./crypto/bls/lib/` for bls library. such as:
+ ```
+ cp -rf crypto/bls/lib/linux/* crypto/bls/lib/
+ ```
  Run the cypher
  ---
 
