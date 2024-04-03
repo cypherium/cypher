@@ -91,7 +91,7 @@ type Backend interface {
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 	SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription
 	SubscribeRemovedLogsEvent(ch chan<- core.RemovedLogsEvent) event.Subscription
-
+	CommitteeMembers(ctx context.Context, blockNr rpc.BlockNumber) ([]*common.Cnode, error)
 	ChainConfig() *params.ChainConfig
 	Engine() consensus.Engine
 

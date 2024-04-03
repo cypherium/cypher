@@ -35,6 +35,7 @@ import (
 	"github.com/cypherium/cypher/eth/gasprice"
 	"github.com/cypherium/cypher/ethdb"
 	"github.com/cypherium/cypher/event"
+	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/miner"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rpc"
@@ -65,6 +66,20 @@ func (b *EthAPIBackend) CurrentBlock() *types.Block {
 func (b *EthAPIBackend) SetHead(number uint64) {
 	b.eth.protocolManager.downloader.Cancel()
 	b.eth.blockchain.SetHead(number)
+}
+
+func (b *EthAPIBackend) CommitteeMembers(ctx context.Context, blockNr rpc.BlockNumber) ([]*common.Cnode, error) {
+
+	// Pending block is only known by the miner
+	log.Info("CommitteeMembers call")
+	if blockNr == rpc.PendingBlockNumber {
+		return nil, errors.New("No pending block for Cypherium")
+	}
+	// Otherwise resolve and return the block
+	if blockNr == rpc.LatestBlockNumber {
+		return b.eth.keyBlockChain.CurrentCommittee(), nil
+	}
+	return b.eth.keyBlockChain.GetCommitteeByNumber(uint64(blockNr)), nil
 }
 
 func (b *EthAPIBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {

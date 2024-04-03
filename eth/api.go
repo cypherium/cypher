@@ -105,6 +105,11 @@ func (api *PublicEthereumAPI) Status() string {
 	}
 	return s
 }
+func (api *PublicEthereumAPI) CommitteeMembers(ctx context.Context, blockNr rpc.BlockNumber) ([]*common.Cnode, error) {
+
+	c, err := api.e.APIBackend.CommitteeMembers(ctx, blockNr)
+	return c, err
+}
 
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.

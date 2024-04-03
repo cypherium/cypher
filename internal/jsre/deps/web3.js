@@ -5412,7 +5412,12 @@ var methods = function () {
         params: 2,
         inputFormatter: [formatters.inputAddressFormatter, null]
     });
-
+    var committeeMembers =new Method({
+        name: 'committeeMembers',
+        call: 'eth_committeeMembers',
+        params: 1,
+        inputFormatter: [formatters.inputBlockNumberFormatter]
+      });
     var call = new Method({
         name: 'call',
         call: 'eth_call',
@@ -5479,6 +5484,7 @@ var methods = function () {
         signTransaction,
         sendTransaction,
         sign,
+        committeeMembers,
         compileSolidity,
         compileLLL,
         compileSerpent,
