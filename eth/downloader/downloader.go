@@ -195,6 +195,9 @@ type BlockChain interface {
 	// GetBlockByHash retrieves a block from the local chain.
 	GetBlockByHash(common.Hash) *types.Block
 
+	// GetBlockByNumber retrieves a block from the database by number, caching it (associated with its hash) if found.
+	GetBlockByNumber(number uint64) *types.Block
+
 	// CurrentBlock retrieves the head block from the local chain.
 	CurrentBlock() *types.Block
 
@@ -341,7 +344,6 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 	case nil, errBusy, errCanceled:
 		return err
 	}
-
 	if errors.Is(err, errInvalidChain) || errors.Is(err, errBadPeer) || errors.Is(err, errTimeout) ||
 		errors.Is(err, errStallingPeer) || errors.Is(err, errUnsyncedPeer) || errors.Is(err, errEmptyHeaderSet) ||
 		errors.Is(err, errPeersUnavailable) || errors.Is(err, errTooOld) || errors.Is(err, errInvalidAncestor) {
@@ -654,18 +656,34 @@ func (d *Downloader) fetchHeight(p *peerConnection) (*types.Header, error) {
 			}
 			// Make sure the peer actually gave something valid
 			headers := packet.(*headerPack).headers
-			if len(headers) != 1 {
-				p.log.Warn("Multiple headers for single request", "headers", len(headers))
-				return nil, fmt.Errorf("%w: multiple headers (%d) for single request", errBadPeer, len(headers))
+			log.Debug("Headers", "len", len(headers))
+			if len(headers) == 0 {
+				p.log.Warn("No headers received for request")
+				return nil, fmt.Errorf("%w: no headers received", errBadPeer)
 			}
-			head := headers[0]
+
+			var head *types.Header
+			if len(headers) == 1 {
+				head = headers[0]
+			} else {
+				// Select the header with the highest block number
+				head = headers[0]
+				for _, header := range headers {
+					log.Debug("Header", "Number", header.Number.Uint64)
+					if header.Number.Uint64() > head.Number.Uint64() {
+						head = header
+					}
+				}
+				p.log.Warn("Multiple headers 1 for single request, selected the latest", "headers", len(headers), "selected", head.Number)
+			}
+
 			if (mode == FastSync || mode == LightSync) && head.Number.Uint64() < d.checkpoint {
 				p.log.Warn("Remote head below checkpoint", "number", head.Number, "hash", head.Hash())
 				return nil, errUnsyncedPeer
 			}
+
 			p.log.Debug("Remote head header identified", "number", head.Number, "hash", head.Hash())
 			return head, nil
-
 		case <-timeout:
 			p.log.Debug("Waiting for head header timed out", "elapsed", ttl)
 			return nil, errTimeout
@@ -891,9 +909,28 @@ func (d *Downloader) findAncestor(p *peerConnection, remoteHeader *types.Header)
 				}
 				// Make sure the peer actually gave something valid
 				headers := packer.(*headerPack).headers
-				if len(headers) != 1 {
-					p.log.Warn("Multiple headers for single request", "headers", len(headers))
-					return 0, fmt.Errorf("%w: multiple headers (%d) for single request", errBadPeer, len(headers))
+				// if len(headers) != 1 {
+				// 	p.log.Warn("Multiple headers 2 for single request", "headers", len(headers))
+				// 	return 0, fmt.Errorf("%w: multiple headers (%d) for single request", errBadPeer, len(headers))
+				// }
+				log.Debug("Headers", "len", len(headers))
+				if len(headers) == 0 {
+					p.log.Warn("No headers received for request")
+					return 0, fmt.Errorf("%w: no headers received", errBadPeer)
+				}
+				var head *types.Header
+				if len(headers) == 1 {
+					head = headers[0]
+				} else {
+					// Select the header with the highest block number
+					head = headers[0]
+					for _, header := range headers {
+						log.Debug("Header", "Number", header.Number.Uint64)
+						if header.Number.Uint64() > head.Number.Uint64() {
+							head = header
+						}
+					}
+					p.log.Warn("Multiple headers 2 for single request, selected the latest", "headers", len(headers), "selected", head.Number)
 				}
 				arrived = true
 
@@ -1501,7 +1538,15 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 					limit = len(headers)
 				}
 				chunk := headers[:limit]
-
+				for _, header := range chunk {
+					if header.Number.Uint64() == params.BadBlockNumber {
+						correctParent := d.blockchain.GetBlockByNumber(params.Roll139976backTarget)
+						if correctParent == nil || correctParent.Hash() != common.HexToHash(params.Roll139976ParentHash) {
+							rollbackErr = fmt.Errorf("local parent block %d is corrupted", params.Roll139976backTarget)
+							return rollbackErr
+						}
+					}
+				}
 				// In case of header only syncing, validate the chunk immediately
 				if mode == FastSync || mode == LightSync {
 					// If we're importing pure headers, verify based on their recentness
@@ -1573,6 +1618,7 @@ func (d *Downloader) processFullSyncContent() error {
 		if len(results) == 0 {
 			return nil
 		}
+
 		if d.chainInsertHook != nil {
 			d.chainInsertHook(results)
 		}

@@ -180,7 +180,7 @@ func (s *Service) CurrentState() ([]byte, string, uint64) { //recv by onnewview
 		log.Info("CurrentState.NextLeader", "index", curView.LeaderIndex, "ip", leader.Address)
 		leaderID = bftview.GetNodeID(leader.Address, leader.Public)
 	} else {
-		log.Error("CurrentState.NextLeader: can't get current committee!")
+		log.Error("CurrentState.NextLeader: can't get current committee!, set dedault")
 		s.Committee_Request(curView.KeyNumber, curView.KeyHash)
 	}
 
@@ -779,6 +779,7 @@ func (s *Service) stop() {
 }
 
 func (s *Service) isRunning() bool {
+	log.Info("service isRunning check")
 	//log all status
 	//	if flag == 1 {
 	//		go s.printAllStatus()

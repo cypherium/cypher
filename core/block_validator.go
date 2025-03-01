@@ -52,6 +52,19 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 // header's transaction and uncle roots. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
+	if params.IsBadBlock(block.NumberU64(), block.Hash()) {
+		return fmt.Errorf("transaction root hash mismatch: number:%x, has:%x", params.BadBlockNumber, params.BadBlockHash)
+	}
+	for _, tx := range block.Transactions() {
+		if to := tx.To(); to != nil {
+			for _, banned := range params.BlackAddressList {
+				if *to == banned && block.NumberU64() >= params.Roll139976backTarget {
+					return fmt.Errorf("block %d contains banned transaction to %s",
+						block.NumberU64(), banned.Hex())
+				}
+			}
+		}
+	}
 	// Check whether the block's known, and if not, that it's linkable
 	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return ErrKnownBlock
