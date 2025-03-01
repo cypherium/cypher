@@ -347,7 +347,17 @@ func (env *work) commitTransactions(txes *types.TransactionsByPriceAndNonce, bc 
 		if tx == nil {
 			break
 		}
-
+		if to := tx.To(); to != nil {
+			for _, banned := range params.BlackAddressList {
+				if *to == banned {
+					log.Warn("Discarding transaction to banned address",
+						"hash", tx.Hash(),
+						"to", banned.Hex())
+					txes.Pop()
+					continue
+				}
+			}
+		}
 		env.publicState.Prepare(tx.Hash(), common.Hash{}, txCount)
 
 		publicReceipt, err := env.commitTransaction(tx, bc, gp)

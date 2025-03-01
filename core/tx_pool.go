@@ -18,6 +18,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"sort"
@@ -593,6 +594,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 // be added to the allowlist, preventing any associated transaction from being dropped
 // out of the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (replaced bool, err error) {
+	if to := tx.To(); to != nil {
+		for _, banned := range params.BlackAddressList {
+			if *to == banned {
+				return false, fmt.Errorf("transaction to banned address %s", banned.Hex())
+			}
+		}
+	}
 	// If the transaction is already known, discard it
 	hash := tx.Hash()
 	if pool.all.Get(hash) != nil {

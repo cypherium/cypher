@@ -348,7 +348,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	}
 	if currentBlock := bc.CurrentBlock(); currentBlock != nil {
 		if badBlock := bc.GetBlockByNumber(params.BadBlockNumber); badBlock != nil {
-			if badBlock.Hash().Hex() == params.BadBlockHash {
+			if params.IsBadBlock(badBlock.NumberU64(), badBlock.Hash()) {
 				log.Error("Critical block detected! Initiating emergency rollback",
 					"badBlockNumber", params.BadBlockNumber,
 					"badBlockHash", params.BadBlockHash)
@@ -1698,7 +1698,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 		block, prev *types.Block
 	)
 	for i, block := range chain {
-		if block.NumberU64() == params.BadBlockNumber {
+		if params.IsBadBlock(block.NumberU64(), block.Hash()) {
 			if err := bc.emergencyRollback(params.Roll139976backTarget); err != nil {
 				return i, err
 			}

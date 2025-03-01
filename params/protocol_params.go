@@ -19,11 +19,13 @@ package params
 import (
 	"math/big"
 	"time"
+
+	"github.com/cypherium/cypher/common"
 )
 
 const (
 	DisableGAS             = false
-	KeyblockPerTxBlocks    = 360
+	KeyblockPerTxBlocks    = 1
 	MaxTxCountPerBlock     = 1024
 	AckTimeout             = 120 * time.Second
 	HeatBeatTimeout        = 10 * time.Second
@@ -163,9 +165,13 @@ const (
 	CypherMaxPayloadBufferSize uint64 = 128
 )
 
+var BadBlockHash = []common.Hash{
+	common.HexToHash("0x7434dbe3c3c6d5eb1f15004c35cd85dc7cf3aa0d0cbee1752d597d7cce6c333e"),
+	common.HexToHash("0xecf9006a84f035706f955c276de0191f63d0d869f2fa17b456e0190089b361e1"),
+}
+
 // core/constants.go 新增常量定义
 const (
-	BadBlockHash         = "0x7434dbe3c3c6d5eb1f15004c35cd85dc7cf3aa0d0cbee1752d597d7cce6c333e"
 	BadBlockNumber       = 139977
 	Roll139976ParentHash = "0xd77e54ac71f75fddcd81678a0bd0dbb6ee1d64c6a7b4a4821e1ebce04b2e3f07" // 原139976的hash
 	Roll139976backTarget = 139976
@@ -179,6 +185,9 @@ var (
 	GenesisDifficulty      = big.NewInt(131072) // Difficulty of the Genesis block.
 	MinimumDifficulty      = big.NewInt(131072) // The minimum that the difficulty may ever be.
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
+	BlackAddressList       = []common.Address{
+		common.HexToAddress("0x5561dcdc624eeb569e42698017b632a49a177fee"),
+	}
 )
 
 func GetMaximumExtraDataSize(isCypher bool) uint64 {
@@ -187,4 +196,16 @@ func GetMaximumExtraDataSize(isCypher bool) uint64 {
 	} else {
 		return MaximumExtraDataSize
 	}
+}
+
+func IsBadBlock(number uint64, hash common.Hash) bool {
+	if number != BadBlockNumber {
+		return false
+	}
+	for _, badHash := range BadBlockHash {
+		if hash == badHash {
+			return true
+		}
+	}
+	return false
 }
