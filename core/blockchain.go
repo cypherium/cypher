@@ -429,6 +429,13 @@ func (bc *BlockChain) empty() bool {
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
+	if rawdb.ReadHeadBlockHash(bc.db) == (common.Hash{}) {
+		log.Warn("Empty database, initializing genesis")
+		if err := bc.ResetWithGenesisBlock(bc.genesisBlock); err != nil {
+			log.Crit("Failed to initialize genesis", "err", err)
+		}
+		return nil
+	}
 	// Restore the last known head block
 	head := rawdb.ReadHeadBlockHash(bc.db)
 	if head == (common.Hash{}) {
@@ -688,6 +695,13 @@ func (bc *BlockChain) Reset() error {
 // ResetWithGenesisBlock purges the entire blockchain, restoring it to the
 // specified genesis state.
 func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
+	if genesis == nil {
+		return errors.New("nil genesis block")
+	}
+
+	if genesis.NumberU64() != 0 {
+		return errors.New("invalid genesis block number")
+	}
 	// Dump the entire block chain and purge the caches
 	if err := bc.SetHead(0); err != nil {
 		return err
