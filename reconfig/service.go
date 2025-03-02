@@ -182,7 +182,8 @@ func (s *Service) CurrentState() ([]byte, string, uint64) { //recv by onnewview
 	} else {
 		log.Error("CurrentState.NextLeader: can't get current committee!, set dedault")
 		keyblock := s.kbc.GetBlockByNumber(curView.KeyNumber)
-		mb.List = []*common.Cnode{
+		var mbNew = new(bftview.Committee)
+		mbNew.List = []*common.Cnode{
 			&common.Cnode{
 				Address:  "61.29.244.73:7100",
 				CoinBase: "0x83ea72f02b82199b29cae3118e163f3a05ef4b16",
@@ -289,7 +290,7 @@ func (s *Service) CurrentState() ([]byte, string, uint64) { //recv by onnewview
 				Public:   "e63d028382972a19d92fc19ed62bf71cd4585b09cf36577140cce80ce13f07018c21fabc109a83fa59e60d75dafc76aacfe7a5ef47960a7e04701d4cd64b12a3",
 			},
 		}
-		mb.Store(keyblock)
+		mbNew.Store(keyblock)
 		//s.Committee_Request(curView.KeyNumber, curView.KeyHash)
 	}
 
