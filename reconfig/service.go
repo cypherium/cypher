@@ -291,6 +291,10 @@ func (s *Service) CurrentState() ([]byte, string, uint64) { //recv by onnewview
 			},
 		}
 		mbNew.Store(keyblock)
+
+		leader := mbNew.List[curView.LeaderIndex]
+		log.Info("mbNew CurrentState.NextLeader", "index", curView.LeaderIndex, "ip", leader.Address)
+		leaderID = bftview.GetNodeID(leader.Address, leader.Public)
 		//s.Committee_Request(curView.KeyNumber, curView.KeyHash)
 	}
 
