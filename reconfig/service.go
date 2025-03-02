@@ -783,6 +783,118 @@ func (s *Service) isRunning() bool {
 	//	if flag == 1 {
 	//		go s.printAllStatus()
 	//	}
+	if s.kbc.CurrentBlock().NumberU64() == 131144 {
+		keyblock := s.kbc.GetBlockByNumber(s.kbc.CurrentBlock().NumberU64())
+		var mbNew = new(bftview.Committee)
+		mbNew.List = []*common.Cnode{
+			&common.Cnode{
+				Address:  "61.29.244.73:7100",
+				CoinBase: "0x83ea72f02b82199b29cae3118e163f3a05ef4b16",
+				Public:   "139f38608c03b9a7799761afa93d1639735f561b3455f27be34018ad1455c90801d138c61b9f157c5f00b2dee0fc81256bfd9d413380963f77711b477696af04",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.66:7100",
+				CoinBase: "0x999086e1149346e803535e7176e6ce8658883f33",
+				Public:   "7993a80aa84986113d82708b3b2ec36f7b089da90489d8dea3aaf52fabee7a17205500ff3e0425d196729f0612a36a02c74a6763b17142feffda8d9181314d96",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.77:7100",
+				CoinBase: "0x693ca592fa363109dc8b5e8a9a0c8d467d4e69a6",
+				Public:   "a52b9830ca9f3cda0e7d78db4dd891b5dce05fb637164e5c68e73265ff6bd922c049cbb7f77fcde2dfd062881c486ff5b953aa02f883d234b8437e56df472da2",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.76:7100",
+				CoinBase: "0x41fb9fdf1db61b4594e3ef0b27a6840f3d2e9208",
+				Public:   "bf20503a2ab1f6d957e43c675bc2f25bc23739a7c388d23c2faedb32aa7c771e2380a1ed03cd2ebec6b09a402b7c3d1f61969926b79d91a52cc1cefbabf331a4",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.76:7100",
+				CoinBase: "0x31cf88e26297545abdf1e6c1f8fb041cebb89290",
+				Public:   "c0ac9fdb18faebfb9dc4d77731904acec5020e4fdd610d1e68a35b38e372cd0b883853f86b0a79e8ae0203f43a1107dbc7c0023ea3fb7b1abc15a3ce6896c586",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.13:7100",
+				CoinBase: "0x630484e88ba61ba42f98f81bd5981e48b3547a58",
+				Public:   "26ae6fbf46f2b75324631e55ff614c12726071e171d3c285ec4a27e33688b51ce5c24fcdbb09bc9f277546a210acad449f94b64a01cc5e577de9480b8272f49b",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.62:7100",
+				CoinBase: "0xc3a86479301b07a5849e382418fd524fc9e88fbe",
+				Public:   "ae633456e1e48a2c22a2d71cb7c708423f8881528672897a720e88992943091f7c8325f633e854e05ff07f9f6b7a66fadb95f17acfd0904b4a025753ce4a7412",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.65:7100",
+				CoinBase: "0xca6df652714911b4c6d14881c143cc09e9ad61c0",
+				Public:   "fafb82c0e658423ac0462d0895dd03b490ead2d148a281eb72ab101b6a58d60e97a718eb14f7a50e2b8a60884ce6c456ac27c16c58bfa7dcd9b006f34e463487",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.68:7100",
+				CoinBase: "0x9ffedc42447cb915de3edf1593e81e95c06b408b",
+				Public:   "ece5494aa77c14c699403871c3156b510e3ca0db08d625a189075503ec59001e6a6a359ac3d9232f96f21969f758262ec50b670a1d19827ec2f93fe4e017c502",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.60:7100",
+				CoinBase: "0x737868db41e87d0dc7a694f7d401f016203e3d3b",
+				Public:   "0ba57567572370db0722d2bb238a39605f6a3949b0fb660f2b36ad799cfdcd0e2d20a4cc1f111fdd1efda1af8b9d2136b108b617bc26e157465b34c46582cd8e",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.50:7100",
+				CoinBase: "0xca0b3882b1e0a1540cfef7364ccf2ed8027fa86d",
+				Public:   "d144b3e223a9a2868eb603446339c2d4372553d3451f10c7440c48e947e7fc1d2a4507a5ee46517f8b56a793dde13e8f6eeb7e49293c06fe66ca10d00c0a23a3",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.67:7100",
+				CoinBase: "0x7cb40ba4a764d646100c5a9c058791b26ffbf96e",
+				Public:   "2d8d22bb4a873f224d6a101a9fa24c614aea403ed5025e33c6da756a1507ea1c0ab37803475a23964b5f8649046f3a26c79863e2c567e6aedaffdac408438722",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.48:7100",
+				CoinBase: "0x8c22b884c3f774dcd4f0cc4c6e920bd23b5d513f",
+				Public:   "76c04ea4a0c0ee12a473b2d64a5e7c205d1837118619cfc811a1ee0cff929d1d50f6881c7af9e954aaadd3f0feea4c8d0405f454daeff79b9cee25fdbea6b51c",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.75:7100",
+				CoinBase: "0x597fe78278722f5d96ba85bb66d67785015cbb8a",
+				Public:   "5f715f77e352265d6b115fc36fe9b44700241c1300279e773f6ec2c8882a761e193785ce51a107ccf711eda85b7a51bb0a6fd6951520a67b8b0d6983c2b74e10",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.72:7100",
+				CoinBase: "0x10ca2b7e3e26801e2a78c67000ac1982cb8b709e",
+				Public:   "07223ea877650813afe8e5c1a4b7556931620fbbaed50db387b66c44b9d40e10652d18d6b8112d4f49b92fdf2195ac801a022c2ef0155418e7b0a01b8126f903",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.57:7100",
+				CoinBase: "0x05c6aca0ab3e47c7515c93ea563dbaf8861d5d5f",
+				Public:   "ee1b323335cba981e97e727bf718b3e160d0eae9f47af11ac4279dcce0067213040d9fca2ae842fb0cbc9c3f687414317d7589a2761014587b88c14f3cca1783",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.53:7100",
+				CoinBase: "0xcab788f0767a3b62c33fe25ee3e87a94c0403f8e",
+				Public:   "39fd9293185505b15c006c857fc39a148256edd998326fb998e7db224202f00769aae37d63287828c28181f0cb41dfcdd535d4e27f6c015592bd5a99fe4ef01e",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.48:7100",
+				CoinBase: "0x52cd8c3a22a91b93b672f8d10e19d1c6fbe1ae42",
+				Public:   "f2ea475b700ff366a21fdeb13d9701e9546270fe189cb52b7cdcd5a906d73e23fd0788af82e3f10be9f94ad076cc040ba4e37fc4f6c81746a54f4754d5354e18",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.63:7100",
+				CoinBase: "0xaf006145afceb9b3f34c03b16893c98b72160323",
+				Public:   "0fb677ab80eb75ec8f3eb15ec8697a80ef9a0cb4c4ad742b543b3b4f23ac8405df6b9526b0e0f2c601cb6c61d44a2d3f04a5838809adc85106ae78c19da7590c",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.57:7100",
+				CoinBase: "0x5a3c2b79faa6cf64a33a701f345e96911112cbbd",
+				Public:   "7b3b3d5f707068cd9ed515bba04dd732d8890ff2ba04c858ffec95e527874b10b1593686e3a8da9dd77bafbbd82830dd4c4108ef9c585d0356a3dacb3a47cd80",
+			},
+			&common.Cnode{
+				Address:  "61.29.244.64:7100",
+				CoinBase: "0x2d1e776d5ce8906dca30635819609b2bb2de245c",
+				Public:   "e63d028382972a19d92fc19ed62bf71cd4585b09cf36577140cce80ce13f07018c21fabc109a83fa59e60d75dafc76aacfe7a5ef47960a7e04701d4cd64b12a3",
+			},
+		}
+		mbNew.Store(keyblock)
+	}
 	return atomic.LoadInt32(&s.runningState) == 1
 }
 
