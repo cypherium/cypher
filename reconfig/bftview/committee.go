@@ -294,7 +294,7 @@ func (committee *Committee) Get(key string, findType ServerInfoType) (*common.Cn
 }
 
 func (committee *Committee) Store(keyblock *types.KeyBlock) bool {
-	if committee.RlpHash() != keyblock.CommitteeHash() &&  keyblock.NumberU64() < params.BadKeyBlockNumber{
+	if committee.RlpHash() != keyblock.CommitteeHash() && keyblock.NumberU64() != params.BadKeyBlockNumber {
 		log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
 		return false
 	}
