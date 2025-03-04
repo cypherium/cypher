@@ -250,45 +250,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		badBlocks:      badBlocks,
 		keyBlockChain:  kbc,
 	}
-	if currentBlock := bc.CurrentBlock(); currentBlock != nil {
-		if badBlock := bc.GetBlockByNumber(params.BadBlockNumber); badBlock != nil {
-			if params.IsBadBlock(badBlock.NumberU64(), badBlock.Hash()) {
-				log.Error("Critical block detected! Initiating emergency rollback",
-					"badBlockNumber", params.BadBlockNumber,
-					"badBlockHash", params.BadBlockHash)
 
-				// Execute emergency rollback
-				if err := bc.emergencyRollback(params.Roll139976backTarget); err != nil {
-					log.Crit("Failed to execute emergency rollback", "error", err)
-				}
-
-				// Post-rollback cleanup
-				log.Info("Performing post-rollback maintenance")
-				go func() {
-					bc.triegc.Empty()
-					bc.stateCache.TrieDB().Cap(0)
-					log.Debug("Memory cleanup completed")
-				}()
-
-				// Reload chain state
-				if err := bc.loadLastState(); err != nil {
-					return nil, fmt.Errorf("failed to reload chain state: %v", err)
-				}
-
-				// Verify post-rollback state
-				if head := bc.CurrentBlock(); head != nil {
-					if _, err := state.New(head.Root(), bc.stateCache, bc.snaps); err != nil {
-						log.Crit("Post-rollback state verification failed",
-							"root", head.Root(),
-							"error", err)
-					}
-					log.Info("Chain state validated successfully",
-						"newHeadHeight", head.NumberU64(),
-						"newHeadHash", head.Hash())
-				}
-			}
-		}
-	}
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
 	bc.processor = NewStateProcessor(chainConfig, bc, engine)
