@@ -175,6 +175,7 @@ const (
 	BadBlockNumber       = 139977
 	Roll139976ParentHash = "0xd77e54ac71f75fddcd81678a0bd0dbb6ee1d64c6a7b4a4821e1ebce04b2e3f07" // 原139976的hash
 	Roll139976backTarget = 139976
+	BadKeyBlockNumber    = 131144
 )
 
 // Gas discount table for BLS12-381 G1 and G2 multi exponentiation operations
