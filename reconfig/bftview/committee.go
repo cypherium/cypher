@@ -297,11 +297,13 @@ func (committee *Committee) Store(keyblock *types.KeyBlock) bool {
 	// 	log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
 	// 	return false
 	// }
-
+	log.Info("comm stroe in")
 	ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
+	log.Info("comm store", "ok", ok)
 	if ok && m_config.service != nil {
 		m_config.service.Committee_OnStored(keyblock, committee)
 	}
+	log.Info("comm store out")
 	return ok
 }
 
