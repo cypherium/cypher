@@ -30,7 +30,6 @@ import (
 	"github.com/cypherium/cypher/crypto/bls"
 	"github.com/cypherium/cypher/ethdb"
 	"github.com/cypherium/cypher/log"
-	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rlp"
 	"golang.org/x/crypto/sha3"
 )
@@ -294,10 +293,10 @@ func (committee *Committee) Get(key string, findType ServerInfoType) (*common.Cn
 }
 
 func (committee *Committee) Store(keyblock *types.KeyBlock) bool {
-	if committee.RlpHash() != keyblock.CommitteeHash() && keyblock.NumberU64() != params.BadKeyBlockNumber {
-		log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
-		return false
-	}
+	// if committee.RlpHash() != keyblock.CommitteeHash() && keyblock.NumberU64() != params.BadKeyBlockNumber {
+	// 	log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
+	// 	return false
+	// }
 
 	ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
 	if ok && m_config.service != nil {
