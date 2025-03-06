@@ -293,23 +293,21 @@ func (committee *Committee) Get(key string, findType ServerInfoType) (*common.Cn
 }
 
 func (committee *Committee) Store(keyblock *types.KeyBlock) bool {
-	// if committee.RlpHash() != keyblock.CommitteeHash() && keyblock.NumberU64() != params.BadKeyBlockNumber {
-	// 	log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
-	// 	return false
-	// }
-	log.Info("comm stroe in")
+	if committee.RlpHash() != keyblock.CommitteeHash() {
+		log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
+		return false
+	}
+
 	ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
-	log.Info("comm store", "ok", ok)
 	if ok && m_config.service != nil {
 		m_config.service.Committee_OnStored(keyblock, committee)
 	}
-	log.Info("comm store out")
 	return ok
 }
 
 func (committee *Committee) Store0(keyblock *types.KeyBlock) bool {
 	if committee.RlpHash() != keyblock.CommitteeHash() {
-		log.Error("Committee.Store 0", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
+		log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
 		return false
 	}
 	ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
