@@ -784,7 +784,7 @@ func (s *Service) isRunning() bool {
 	//	if flag == 1 {
 	//		go s.printAllStatus()
 	//	}
-	if s.kbc.CurrentBlock().NumberU64() == 131144 {
+	if s.kbc.CurrentBlock().NumberU64() == params.BadKeyBlockNumber {
 		keyblock := s.kbc.GetBlockByNumber(s.kbc.CurrentBlock().NumberU64())
 		var mbNew = new(bftview.Committee)
 		mbNew.List = []*common.Cnode{
