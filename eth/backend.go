@@ -60,6 +60,7 @@ import (
 	p2pnat "github.com/cypherium/cypher/p2p/nat"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/reconfig"
+	"github.com/cypherium/cypher/reconfig/bftview"
 	"github.com/cypherium/cypher/rlp"
 	"github.com/cypherium/cypher/rpc"
 )
@@ -171,7 +172,8 @@ func New(stack *node.Node, config *Config) (*Ethereum, error) {
 		consensusServicePendingLogsFeed: new(event.Feed),
 		extIP:                           extIP,
 	}
-
+        bftview.SetServerCoinBase(config.Miner.Etherbase) 
+	
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 	var dbVer = "<nil>"
 	if bcVersion != nil {
@@ -449,6 +451,7 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.lock.Unlock()
 
 	s.miner.SetCoinbase(etherbase)
+	bftview.SetServerCoinBase(etherbase)
 }
 
 /*
@@ -475,13 +478,14 @@ func (s *Ethereum) StartMining(threads int) error {
 		s.lock.RUnlock()
 		s.txPool.SetGasPrice(price)
 
-		// Configure the local mining address
-		eb, err := s.Etherbase()
-		if err != nil {
-			log.Error("Cannot start mining without etherbase", "err", err)
-			return fmt.Errorf("etherbase missing: %v", err)
-		}
-		if clique, ok := s.engine.(*clique.Clique); ok {
+               // Configure the local mining address
+               eb, err := s.Etherbase()
+               if err != nil {
+                       log.Error("Cannot start mining without etherbase", "err", err)
+                       return fmt.Errorf("etherbase missing: %v", err)
+               }
+               bftview.SetServerCoinBase(eb)
+               if clique, ok := s.engine.(*clique.Clique); ok {
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
 				log.Error("Etherbase account unavailable locally", "err", err)
@@ -518,10 +522,11 @@ func (s *Ethereum) StartMining(local bool, eb common.Address, pubKey ed25519.Pub
 	if !s.IsMining() {
 		s.lock.RLock()
 		price := s.gasPrice
-		s.lock.RUnlock()
-		s.txPool.SetGasPrice(price)
-		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
-		go s.miner.Start(pubKey, eb)
+               s.lock.RUnlock()
+               s.txPool.SetGasPrice(price)
+               bftview.SetServerCoinBase(eb)
+               atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+               go s.miner.Start(pubKey, eb)
 	}
 	return nil
 }
