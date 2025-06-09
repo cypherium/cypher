@@ -757,10 +757,13 @@ func (s *Service) procBlockDone(block *types.Block) {
 
 // call by miner.start
 func (s *Service) start(config *common.NodeConfig) {
-	if !s.isRunning() {
-		s.protocolMng.UpdateKeyPair(bftview.StrToBlsPrivKey(config.Private))
-		bftview.SetServerInfo(s.netService.serverAddress, config.Public)
-		s.netService.StartStop(true)
+        if !s.isRunning() {
+                s.protocolMng.UpdateKeyPair(bftview.StrToBlsPrivKey(config.Private))
+                bftview.SetServerInfo(s.netService.serverAddress, config.Public)
+               if config.Coinbase != "" {
+                       bftview.SetServerCoinBase(common.HexToAddress(config.Coinbase))
+               }
+                s.netService.StartStop(true)
 		if bftview.IamMember() >= 0 {
 			s.updateCommittee(nil)
 			s.pacetMakerTimer.start()
