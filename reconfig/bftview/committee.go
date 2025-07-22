@@ -89,9 +89,48 @@ type CommitteeConfig struct {
 	maxKeyNumber     uint64
 }
 
+type RescueConfig struct {
+	KeyBlockHash common.Hash          `json:"keyBlockHash"`
+	Committee    []*common.Cnode      `json:"committee"`
+}
+
+type RescueCommitteeArgs struct {
+	ConfigPath string `json:"configPath"`
+}
+
 const CommitteeCacheSize = 10
 
 var m_config CommitteeConfig
+var (
+    rescueMode      bool
+    rescueHeight    uint64
+    rescueHash      common.Hash
+    rescueMutex     sync.RWMutex
+)
+
+func SetRescueMode(height uint64, hash common.Hash, committee *Committee) {
+    rescueMutex.Lock()
+    defer rescueMutex.Unlock()
+    
+    rescueMode = true
+    rescueHeight = height
+    rescueHash = hash
+    
+    DeleteCommittee(height, hash)
+    WriteCommittee(height, hash, committee)
+}
+
+func ClearRescueMode() {
+    rescueMutex.Lock()
+    defer rescueMutex.Unlock()
+    rescueMode = false
+}
+
+func InRescueMode(height uint64, hash common.Hash) bool {
+    rescueMutex.RLock()
+    defer rescueMutex.RUnlock()
+    return rescueMode && rescueHeight == height && rescueHash == hash
+}
 
 func SetCommitteeConfig(db ethdb.Database, keyblockchain KeyBlockChainInterface, service ServiceInterface) {
 	m_config.db = db
@@ -296,27 +335,44 @@ func (committee *Committee) Get(key string, findType ServerInfoType) (*common.Cn
 	return nil, -1
 }
 
+func (committee *Committee) validateHash(keyblock *types.KeyBlock) bool {
+    kNumber := keyblock.NumberU64()
+    kHash := keyblock.Hash()
+    
+    if InRescueMode(kNumber, kHash) {
+        log.Warn("Rescue mode: skipping committee hash check", 
+            "block", kNumber, "hash", kHash.Hex())
+        return true
+    }
+    
+    if committee.RlpHash() != keyblock.CommitteeHash() {
+        log.Error("Committee hash mismatch", 
+            "computed", committee.RlpHash().Hex(),
+            "block", keyblock.CommitteeHash().Hex(),
+            "keyblock number", kNumber)
+        return false
+    }
+    return true
+}
+
 func (committee *Committee) Store(keyblock *types.KeyBlock) bool {
-	if committee.RlpHash() != keyblock.CommitteeHash() {
-		log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
-		return false
-	}
-
-	ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
-	if ok && m_config.service != nil {
-		m_config.service.Committee_OnStored(keyblock, committee)
-	}
-	return ok
+    if !committee.validateHash(keyblock) {
+        return false
+    }
+    ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
+    if ok && m_config.service != nil {
+        m_config.service.Committee_OnStored(keyblock, committee)
+    }
+    return ok
 }
 
-func (committee *Committee) Store0(keyblock *types.KeyBlock) bool {
-	if committee.RlpHash() != keyblock.CommitteeHash() {
-		log.Error("Committee.Store", "committee.RlpHash != keyblock.CommitteeHash keyblock number", keyblock.NumberU64())
-		return false
-	}
-	ok := WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
-	return ok
+func (committee *Committee) StoreWithoutCallback(keyblock *types.KeyBlock) bool {
+    if !committee.validateHash(keyblock) {
+        return false
+    }
+    return WriteCommittee(keyblock.NumberU64(), keyblock.Hash(), committee)
 }
+
 
 func (committee *Committee) Copy() *Committee {
 	p := &Committee{}
@@ -557,4 +613,7 @@ func DeleteCommittee(keyBlockNumber uint64, hash common.Hash) {
 	if err := m_config.db.Delete(rawdb.CommitteeKey(keyBlockNumber, hash)); err != nil {
 		log.Crit("Failed to delete committee", "err", err)
 	}
+	m_config.muCommitteeCache.Lock()
+    delete(m_config.cacheCommittee, hash)
+    m_config.muCommitteeCache.Unlock()
 }

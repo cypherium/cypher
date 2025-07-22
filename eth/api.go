@@ -40,10 +40,8 @@ import (
 	"github.com/cypherium/cypher/rlp"
 	"github.com/cypherium/cypher/rpc"
 	"github.com/cypherium/cypher/trie"
-
-	//	"github.com/cypherium/cypher/params"
+	//"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/reconfig/bftview"
-
 	"golang.org/x/crypto/ed25519"
 )
 

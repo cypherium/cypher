@@ -26,7 +26,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-
 	"github.com/cypherium/cypher/accounts"
 	"github.com/cypherium/cypher/accounts/abi"
 	"github.com/cypherium/cypher/accounts/keystore"
@@ -48,6 +47,7 @@ import (
 
 	"github.com/cypherium/cypher/rlp"
 	"github.com/cypherium/cypher/rpc"
+	"github.com/cypherium/cypher/reconfig/bftview"
 )
 
 type TransactionType uint8
@@ -617,9 +617,23 @@ func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
 	return hexutil.Uint64(header.Number.Uint64())
 }
+
 func (s *PublicBlockChainAPI) KeyBlockNumber() hexutil.Uint64 {
 	keyblock := s.b.GetKeyBlockChain().CurrentBlock()
 	return hexutil.Uint64(keyblock.NumberU64())
+}
+
+func (s *PublicBlockChainAPI) RescueCommittee(args bftview.RescueCommitteeArgs) (bool, error) {
+    committee, keyBlockHash, err := s.b.RescueCommittee(args.ConfigPath)
+    if err != nil {
+        return false, err
+    }
+	if (keyBlockHash == common.Hash{}) {
+        return false, errors.New("key block hash is empty (invalid config)")
+    }
+    keyblock := s.b.GetKeyBlockChain().GetBlockByHash(keyBlockHash)
+    bftview.SetRescueMode(keyblock.NumberU64(), keyblock.Hash(), committee)
+    return true, nil
 }
 
 // GetBalance returns the amount of wei for the given address in the state of the

@@ -580,7 +580,7 @@ func (s *Service) saveCommittee(curKeyBlock *types.KeyBlock) {
 	}
 
 	mb, _ = bftview.GetCommittee(newNode, curKeyBlock, false)
-	mb.Store0(curKeyBlock)
+	mb.StoreWithoutCallback(curKeyBlock)
 }
 
 // Update committee by keyblock
@@ -783,10 +783,6 @@ func (s *Service) stop() {
 
 func (s *Service) isRunning() bool {
 	log.Info("service isRunning check")
-	//log all status
-	//	if flag == 1 {
-	//		go s.printAllStatus()
-	//	}
 	return atomic.LoadInt32(&s.runningState) == 1
 }
 

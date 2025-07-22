@@ -35,6 +35,7 @@ import (
 	"github.com/cypherium/cypher/event"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rpc"
+	"github.com/cypherium/cypher/reconfig/bftview"
 )
 
 // Backend interface provides the common API services (that are provided by
@@ -65,6 +66,7 @@ type Backend interface {
 	KeyBlockByHash(ctx context.Context, blockHash common.Hash) (*types.KeyBlock, error)
 	BlockByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*types.Block, error)
 	KeyBlockNumber() uint64
+	RescueCommittee(configPath string) (*bftview.Committee, common.Hash, error)
 	StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *types.Header, error)
 	StateAndHeaderByNumberOrHash(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error)
 	GetReceipts(ctx context.Context, hash common.Hash) (types.Receipts, error)

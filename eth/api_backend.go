@@ -21,6 +21,9 @@ import (
 	"errors"
 	"math/big"
 	"time"
+	"io/ioutil"
+	"encoding/json"
+	"fmt"
 
 	"github.com/cypherium/cypher/accounts"
 	"github.com/cypherium/cypher/common"
@@ -39,6 +42,7 @@ import (
 	"github.com/cypherium/cypher/miner"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/rpc"
+	"github.com/cypherium/cypher/reconfig/bftview"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -80,6 +84,25 @@ func (b *EthAPIBackend) CommitteeMembers(ctx context.Context, blockNr rpc.BlockN
 		return b.eth.keyBlockChain.CurrentCommittee(), nil
 	}
 	return b.eth.keyBlockChain.GetCommitteeByNumber(uint64(blockNr)), nil
+}
+
+func (b *EthAPIBackend) RescueCommittee(configPath string) (*bftview.Committee, common.Hash, error) {
+    data, err := ioutil.ReadFile(configPath)
+    if err != nil {
+        return nil, common.Hash{}, fmt.Errorf("failed to read config file: %v", err)
+    }
+    
+    var config bftview.RescueConfig
+    if err := json.Unmarshal(data, &config); err != nil {
+        return nil, common.Hash{}, fmt.Errorf("failed to parse config: %v", err)
+    }
+    keyblock := b.eth.blockchain.GetBlockByHash(config.KeyBlockHash)
+    if keyblock == nil {
+        return nil, common.Hash{}, errors.New("key block not found")
+    }
+    
+    committee := &bftview.Committee{List: config.Committee}
+    return committee, config.KeyBlockHash, nil
 }
 
 func (b *EthAPIBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {

@@ -188,7 +188,11 @@ func (keyS *keyService) verifyKeyBlock(keyblock *types.KeyBlock, bestCandi *type
 	if mb.In().CoinBase != keyblock.InAddress() || mb.In().Public != keyblock.InPubKey() {
 		return fmt.Errorf("keyblock verify failed, in is not correct")
 	}
-
+	if bftview.InRescueMode(keyblock.NumberU64(), keyblock.Hash()) {
+        bftview.ClearRescueMode()
+        log.Info("Rescue mode cleared after processing block", 
+            "number", keyblock.NumberU64())
+    }
 	if bftview.LoadMember(keyblock.NumberU64(), keyblock.Hash(), true) == nil {
 		mb.Store(keyblock)
 	}
