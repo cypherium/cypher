@@ -302,19 +302,29 @@ func (c *Console) Welcome() {
 	message := "Welcome to the Geth JavaScript console!\n\n"
 
 	// Print some generic Geth metadata
-	if res, err := c.jsre.Run(`
-		var message = "instance: " + web3.version.node + "\n";
-		try {
-			message += "coinbase: " + eth.coinbase + "\n";
-		} catch (err) {}
-		message += "at block: " + eth.blockNumber + " (" + new Date(1000 * eth.getBlock(eth.blockNumber).timestamp) + ")\n";
-		try {
-			message += " datadir: " + admin.datadir + "\n";
-		} catch (err) {}
-		message
-	`); err == nil {
-		message += res.String()
+if res, err := c.jsre.Run(`
+	var message = "instance: " + web3.version.node + "\n";
+	try {
+		message += "coinbase: " + eth.coinbase + "\n";
+	} catch (err) {}
+
+	var ts = eth.getBlock(eth.blockNumber).timestamp;
+	// If timestamp is milliseconds, convert to seconds
+	if (ts > 9999999999) {
+		ts = Math.floor(ts / 1000);
 	}
+	var dateStr = new Date(ts * 1000).toISOString();
+
+	message += "at block: " + eth.blockNumber +
+		" (timestamp: " + ts + " seconds, date: " + dateStr + ")\n";
+
+	try {
+		message += " datadir: " + admin.datadir + "\n";
+	} catch (err) {}
+	message
+`); err == nil {
+	message += res.String()
+}
 	// List all the supported modules for the user to call
 	if apis, err := c.client.SupportedModules(); err == nil {
 		modules := make([]string, 0, len(apis))
