@@ -49,7 +49,7 @@ import (
 	"github.com/cypherium/cypher/internal/ethapi"
 	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/miner"
-
+	"github.com/cypherium/cypher/reconfig/bftview"
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/cypherium/cypher/node"
@@ -449,6 +449,8 @@ func (s *Ethereum) SetEtherbase(etherbase common.Address) {
 	s.lock.Unlock()
 
 	s.miner.SetCoinbase(etherbase)
+
+	bftview.SetServerCoinBase(etherbase)
 }
 
 /*

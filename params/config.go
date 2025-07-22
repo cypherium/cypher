@@ -49,7 +49,6 @@ var TrustedCheckpoints = map[common.Hash]*TrustedCheckpoint{
 // the chain it belongs to.
 var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 //	MainnetGenesisHash: MainnetCheckpointOracle,
-//	CypheriumGenesisHash: CypheriumCheckpointOracle,
 	RopstenGenesisHash: RopstenCheckpointOracle,
 	RinkebyGenesisHash: RinkebyCheckpointOracle,
 	GoerliGenesisHash:  GoerliCheckpointOracle,
@@ -58,12 +57,12 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
-		ChainID:             big.NewInt(16166), //Changed
+		ChainID:             big.NewInt(16166),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      true,
 		EIP150Block:         big.NewInt(0),
-		EIP150Hash:          common.HexToHash("0xe8186a2e15328b38547348dec5d25b051bc1d17681c66b8c8ac15c06afa223c6"), //Chaneged
+		EIP150Hash:          common.HexToHash("0xe8186a2e15328b38547348dec5d25b051bc1d17681c66b8c8ac15c06afa223c6"),
 		EIP155Block:         big.NewInt(0),
 		EIP158Block:         big.NewInt(0),
 		ByzantiumBlock:      big.NewInt(0),
@@ -80,8 +79,6 @@ var (
           CHTRoot:      common.HexToHash("0x997a477225b460cdc2f92a0e6abb16823144af38836254f99a5a4a58aab1e5bd"),
           BloomRoot:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
       }
-
-
 
 	// RopstenChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	RopstenChainConfig = &ChainConfig{
