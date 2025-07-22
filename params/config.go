@@ -39,6 +39,7 @@ var (
 // the chain it belongs to.
 var TrustedCheckpoints = map[common.Hash]*TrustedCheckpoint{
 	MainnetGenesisHash: MainnetTrustedCheckpoint,
+//	CypheriumGenesisHash: CypheriumTrustedCheckpoint,
 	RopstenGenesisHash: RopstenTrustedCheckpoint,
 	RinkebyGenesisHash: RinkebyTrustedCheckpoint,
 	GoerliGenesisHash:  GoerliTrustedCheckpoint,
@@ -79,7 +80,6 @@ var (
           BloomRoot:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
       }
 
-	
 	// RopstenChainConfig contains the chain parameters to run a node on the Ropsten test network.
 	RopstenChainConfig = &ChainConfig{
 		ChainID:             big.NewInt(16164),
