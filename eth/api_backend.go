@@ -18,12 +18,12 @@ package eth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"math/big"
 	"time"
-	"io/ioutil"
-	"encoding/json"
-	"fmt"
 
 	"github.com/cypherium/cypher/accounts"
 	"github.com/cypherium/cypher/common"
@@ -41,8 +41,8 @@ import (
 	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/miner"
 	"github.com/cypherium/cypher/params"
-	"github.com/cypherium/cypher/rpc"
 	"github.com/cypherium/cypher/reconfig/bftview"
+	"github.com/cypherium/cypher/rpc"
 )
 
 // EthAPIBackend implements ethapi.Backend for full nodes
@@ -87,22 +87,61 @@ func (b *EthAPIBackend) CommitteeMembers(ctx context.Context, blockNr rpc.BlockN
 }
 
 func (b *EthAPIBackend) RescueCommittee(configPath string) (*bftview.Committee, common.Hash, error) {
-    data, err := ioutil.ReadFile(configPath)
-    if err != nil {
-        return nil, common.Hash{}, fmt.Errorf("failed to read config file: %v", err)
-    }
-    
-    var config bftview.RescueConfig
-    if err := json.Unmarshal(data, &config); err != nil {
-        return nil, common.Hash{}, fmt.Errorf("failed to parse config: %v", err)
-    }
-    keyblock := b.eth.blockchain.GetBlockByHash(config.KeyBlockHash)
-    if keyblock == nil {
-        return nil, common.Hash{}, errors.New("key block not found")
-    }
-    
-    committee := &bftview.Committee{List: config.Committee}
-    return committee, config.KeyBlockHash, nil
+	data, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return nil, common.Hash{}, fmt.Errorf("failed to read config file: %v", err)
+	}
+
+	var config bftview.RescueConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, common.Hash{}, fmt.Errorf("failed to parse config: %v", err)
+	}
+
+	log.Info("RescueCommittee, latetKeyNumber:%d, configNumber:%d", b.KeyBlockNumber(), config.KeyBlockNumber)
+
+	// Define trusted key block heights for rescue operations
+	rescueTrustHeights := []uint64{178145} // replace with actual trusted heights
+
+	// Check if KeyBlockNumber matches and exists in trusted heights array
+	currentKeyNumber := b.KeyBlockNumber()
+	if currentKeyNumber != config.KeyBlockNumber {
+		return nil, common.Hash{}, errors.New("not the newest keynumber")
+	}
+
+	// Check if current key number is in the trusted heights list
+	isTrustedHeight := false
+	for _, height := range rescueTrustHeights {
+		if height == currentKeyNumber {
+			isTrustedHeight = true
+			break
+		}
+	}
+
+	if !isTrustedHeight {
+		return nil, common.Hash{}, errors.New("keynumber not in trusted heights")
+	}
+
+	// Verify that all CoinBase addresses are in the trusted list
+	trustedSet := make(map[common.Address]bool)
+	for _, addr := range params.TrustedAddressList {
+		trustedSet[addr] = true
+	}
+
+	// Check each committee member's coinbase address
+	for _, cnode := range config.Committee {
+		// Convert CoinBase string to common.Address (case-insensitive)
+		coinbaseAddr := common.HexToAddress(cnode.CoinBase)
+		if !trustedSet[coinbaseAddr] {
+			return nil, common.Hash{}, fmt.Errorf("coinbase address %s is not in trusted list", cnode.CoinBase)
+		}
+	}
+	log.Info("equal all trustAdress")
+	keyblock := b.eth.keyBlockChain.GetBlockByNumber(config.KeyBlockNumber)
+	if keyblock == nil {
+		return nil, common.Hash{}, errors.New("key block not found")
+	}
+	committee := &bftview.Committee{List: config.Committee}
+	return committee, keyblock.Hash(), nil
 }
 
 func (b *EthAPIBackend) HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error) {
