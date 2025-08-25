@@ -135,7 +135,7 @@ func (b *EthAPIBackend) RescueCommittee(configPath string) (*bftview.Committee, 
 			return nil, common.Hash{}, fmt.Errorf("coinbase address %s is not in trusted list", cnode.CoinBase)
 		}
 	}
-	log.Info("equal all trustAdress")
+	log.Info("equal all trustAdress!")
 	keyblock := b.eth.keyBlockChain.GetBlockByNumber(config.KeyBlockNumber)
 	if keyblock == nil {
 		return nil, common.Hash{}, errors.New("key block not found")
