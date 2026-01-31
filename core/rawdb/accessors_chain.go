@@ -23,7 +23,6 @@ import (
 
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/core/types"
-	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/ethdb"
 	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/params"
@@ -49,6 +48,7 @@ func ReadCanonicalHash(db ethdb.Reader, number uint64) common.Hash {
 	return common.BytesToHash(data)
 }
 
+// ReadAncientCanonicalHash retrieves canonical hash from ancient store directly
 // WriteCanonicalHash stores the hash assigned to a canonical block number.
 func WriteCanonicalHash(db ethdb.KeyValueWriter, hash common.Hash, number uint64) {
 	if err := db.Put(headerHashKey(number), hash.Bytes()); err != nil {
@@ -274,8 +274,13 @@ func ReadHeaderRLP(db ethdb.Reader, hash common.Hash, number uint64) rlp.RawValu
 	// comparison is necessary since ancient database only maintains
 	// the canonical data.
 	data, _ := db.Ancient(freezerHeaderTable, number)
-	if len(data) > 0 && crypto.Keccak256Hash(data) == hash {
-		return data
+	if len(data) > 0 {
+		header := new(types.Header)
+		if err := rlp.Decode(bytes.NewReader(data), header); err == nil {
+			if header.Hash() == hash {
+				return data
+			}
+		}
 	}
 	// Then try to look up the data in leveldb.
 	data, _ = db.Get(headerKey(number, hash))
@@ -287,8 +292,13 @@ func ReadHeaderRLP(db ethdb.Reader, hash common.Hash, number uint64) rlp.RawValu
 	// but when we reach into leveldb, the data was already moved. That would
 	// result in a not found error.
 	data, _ = db.Ancient(freezerHeaderTable, number)
-	if len(data) > 0 && crypto.Keccak256Hash(data) == hash {
-		return data
+	if len(data) > 0 {
+		header := new(types.Header)
+		if err := rlp.Decode(bytes.NewReader(data), header); err == nil {
+			if header.Hash() == hash {
+				return data
+			}
+		}
 	}
 	return nil // Can't find the data anywhere.
 }
