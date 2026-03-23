@@ -250,6 +250,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		badBlocks:      badBlocks,
 		keyBlockChain:  kbc,
 	}
+
 	bc.validator = NewBlockValidator(chainConfig, bc, engine)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
 	bc.processor = NewStateProcessor(chainConfig, bc, engine)
@@ -390,13 +391,6 @@ func (bc *BlockChain) empty() bool {
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
-	if rawdb.ReadHeadBlockHash(bc.db) == (common.Hash{}) {
-		log.Warn("Empty database, initializing genesis")
-		if err := bc.ResetWithGenesisBlock(bc.genesisBlock); err != nil {
-			log.Crit("Failed to initialize genesis", "err", err)
-		}
-		return nil
-	}
 	// Restore the last known head block
 	head := rawdb.ReadHeadBlockHash(bc.db)
 	if head == (common.Hash{}) {
@@ -656,13 +650,6 @@ func (bc *BlockChain) Reset() error {
 // ResetWithGenesisBlock purges the entire blockchain, restoring it to the
 // specified genesis state.
 func (bc *BlockChain) ResetWithGenesisBlock(genesis *types.Block) error {
-	if genesis == nil {
-		return errors.New("nil genesis block")
-	}
-
-	if genesis.NumberU64() != 0 {
-		return errors.New("invalid genesis block number")
-	}
 	// Dump the entire block chain and purge the caches
 	if err := bc.SetHead(0); err != nil {
 		return err
@@ -1729,7 +1716,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		log.Debug("Premature abort during blocks processing")
 		return 0, ErrAbortBlocksProcessing
 	}
-	bc.maybeUpgradeMainnetConfig(chain[0].Number())
 	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
 	senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
 
@@ -1830,7 +1816,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 	}
 	// No validation errors for the first block (or chain prefix skipped)
 	for ; block != nil && err == nil || err == ErrKnownBlock; block, err = it.next() {
-		bc.maybeUpgradeMainnetConfig(block.Number())
 		log.Info("insertChain", "number", block.Number())
 		// If the chain is terminating, stop processing blocks
 		if bc.insertStopped() {
@@ -2557,19 +2542,6 @@ func (bc *BlockChain) GetTransactionLookup(hash common.Hash) *rawdb.LegacyTxLook
 
 // Config retrieves the chain's fork configuration.
 func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
-func (bc *BlockChain) maybeUpgradeMainnetConfig(blockNumber *big.Int) {
-	if bc.genesisBlock == nil || blockNumber == nil {
-		return
-	}
-	if bc.genesisBlock.Hash() != params.MainnetGenesisHash {
-		return
-	}
-	if !params.ApplyMainnetEcdsaConfig(bc.chainConfig, blockNumber) {
-		return
-	}
-	rawdb.WriteChainConfig(bc.db, bc.genesisBlock.Hash(), bc.chainConfig)
-	log.Info("Upgraded mainnet chain configuration", "block", blockNumber, "chainId", bc.chainConfig.ChainID)
-}
 
 // Engine retrieves the blockchain's consensus engine.
 func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
