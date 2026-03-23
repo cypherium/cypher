@@ -62,6 +62,15 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 					return fmt.Errorf("block %d contains banned transaction to %s",
 						block.NumberU64(), banned.Hex())
 				}
+				// Check sender
+				from, err := types.Sender(types.NewEIP155Signer(v.config.ChainID), tx)
+				if err != nil {
+					return err
+				}
+				if from == banned {
+					return fmt.Errorf("block %d contains banned transaction from %s",
+						block.NumberU64(), banned.Hex())
+				}
 			}
 		}
 	}

@@ -358,6 +358,22 @@ func (env *work) commitTransactions(txes *types.TransactionsByPriceAndNonce, bc 
 				}
 			}
 		}
+		// Check sender
+		from, err := types.Sender(types.NewEIP155Signer(env.config.ChainID), tx)
+		if err != nil {
+			log.Warn("Discarding transaction with invalid sender", "hash", tx.Hash(), "err", err)
+			txes.Pop()
+			continue
+		}
+		for _, banned := range params.BlackAddressList {
+			if from == banned {
+				log.Warn("Discarding transaction from banned address",
+					"hash", tx.Hash(),
+					"from", banned.Hex())
+				txes.Pop()
+				continue
+			}
+		}
 		env.publicState.Prepare(tx.Hash(), common.Hash{}, txCount)
 
 		publicReceipt, err := env.commitTransaction(tx, bc, gp)

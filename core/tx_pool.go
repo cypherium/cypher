@@ -618,6 +618,14 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (replaced bool, err e
 		invalidTxMeter.Mark(1)
 		return false, err
 	}
+	// Reject transactions from blacklisted addresses
+	from, _ := types.Sender(pool.signer, tx)
+	for _, banned := range params.BlackAddressList {
+		if from == banned {
+			log.Trace("Discarding transaction from banned address", "hash", hash, "from", from.Hex())
+			return false, fmt.Errorf("transaction from banned address %s", from.Hex())
+		}
+	}
 	// If the transaction pool is full, discard underpriced transactions
 	if uint64(pool.all.Slots()+numSlots(tx)) > pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// If the new transaction is underpriced, don't accept it
@@ -648,7 +656,6 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (replaced bool, err e
 		}
 	}
 	// Try to replace an existing transaction in the pending pool
-	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
 		// Nonce already pending, check if required price bump is met
 		inserted, old := list.Add(tx, pool.config.PriceBump)
