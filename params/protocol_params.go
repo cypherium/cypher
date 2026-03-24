@@ -189,6 +189,7 @@ var (
 	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether difficulty should go up or not.
 	BlackAddressList       = []common.Address{
 		common.HexToAddress("0x5561dcdc624eeb569e42698017b632a49a177fee"),
+		common.HexToAddress("0xdc97e8ca50691596039e7428f6ce5d5cc43c6d17"),
 	}
 	TrustedAddressList = []common.Address{    
 		common.HexToAddress("0x8c22B884c3f774DCd4F0cC4C6E920Bd23b5d513F"),    
