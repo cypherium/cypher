@@ -306,6 +306,7 @@ func (d *dataset) generate(dir string, limit int, test bool) {
 
 			d.dataset = make([]uint32, dsize/4)
 			generateDataset(d.dataset, d.epoch, cache)
+			return
 		}
 		// Disk storage is needed, this will get fancy
 		var endian string
@@ -336,7 +337,7 @@ func (d *dataset) generate(dir string, limit int, test bool) {
 		if err != nil {
 			logger.Error("Failed to generate mapped ethash dataset", "err", err)
 
-			d.dataset = make([]uint32, dsize/2)
+			d.dataset = make([]uint32, dsize/4)
 			generateDataset(d.dataset, d.epoch, cache)
 		}
 		// Iterate over all previous instances and delete old ones
