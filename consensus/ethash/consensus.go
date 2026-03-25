@@ -141,7 +141,7 @@ func calcKeyBlockDifficultyByzantium(time uint64, parent *types.KeyBlockHeader) 
 	return x
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////////////
 // VerifyCandidate implements pow.Engine, checking whether the given candidate satisfies
 // the PoW difficulty requirements.
 func (ethash *Ethash) VerifyCandidate(chain types.KeyChainReader, candidate *types.Candidate) error {
@@ -209,7 +209,7 @@ func (ethash *Ethash) VerifyHeaderSeal(header *types.Header) error {
 	if ethash.config.PowMode == ModeTest {
 		size = 32 * 1024
 	}
-	digest, result := hashimotoLight(size, cache.cache, header.SealHash().Bytes(), header.Nonce.Uint64())
+	digest, result := colossusHashLight(size, cache.cache, header.SealHash().Bytes(), header.Nonce.Uint64())
 	runtime.KeepAlive(cache)
 
 	if !bytes.Equal(header.MixDigest[:], digest) {
@@ -239,13 +239,10 @@ func (ethash *Ethash) SealHeader(header *types.Header, stop <-chan struct{}) err
 	}
 
 	number := header.Number.Uint64()
-	cache := ethash.cache(number)
-	size := datasetSize(number)
-	if ethash.config.PowMode == ModeTest {
-		size = 32 * 1024
-	}
 	target := new(big.Int).Div(maxUint256, header.Difficulty)
 	hash := header.SealHash().Bytes()
+	dataset := ethash.dataset(number)
+	defer runtime.KeepAlive(dataset)
 
 	for nonce := uint64(0); ; nonce++ {
 		select {
@@ -253,11 +250,10 @@ func (ethash *Ethash) SealHeader(header *types.Header, stop <-chan struct{}) err
 			return errors.New("sealing aborted")
 		default:
 		}
-		digest, result := hashimotoLight(size, cache.cache, hash, nonce)
+		digest, result := colossusHashFull(dataset.dataset, hash, nonce)
 		if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 			header.Nonce = types.EncodeNonce(nonce)
 			header.MixDigest = common.BytesToHash(digest)
-			runtime.KeepAlive(cache)
 			return nil
 		}
 	}
@@ -330,7 +326,7 @@ func (ethash *Ethash) PowMode() uint {
 	return uint(ethash.config.PowMode)
 }
 
-//----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------
 // Author implements consensus.Engine, returning the header's coinbase as the
 // proof-of-work verified author of the block.
 func (ethash *Ethash) Author(header *types.Header) (common.Address, error) {
