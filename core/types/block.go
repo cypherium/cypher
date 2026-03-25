@@ -126,6 +126,32 @@ func (h *Header) Hash() common.Hash {
 	cpy.SetSignInfoNull()
 	return rlpHash(cpy)
 }
+
+// SealHash returns the hash of a block prior to it being sealed.
+//
+// The seal hash intentionally excludes the consensus seal fields (MixDigest,
+// Nonce) and hotstuff signature payload, so it can be used as the stable PoW
+// preimage for normal block sealing/verification.
+func (h *Header) SealHash() common.Hash {
+	return rlpHash([]interface{}{
+		h.ParentHash,
+		h.UncleHash,
+		h.Coinbase,
+		h.Root,
+		h.TxHash,
+		h.ReceiptHash,
+		h.Bloom,
+		h.Difficulty,
+		h.Number,
+		h.GasLimit,
+		h.GasUsed,
+		h.Time,
+		h.Extra,
+		h.BlockType,
+		h.KeyHash,
+		h.KeyInfo,
+	})
+}
 func (h *Header) SetSignInfoNull() {
 	h.SignInfo.Signature = nil
 	h.SignInfo.Exceptions = nil
@@ -373,7 +399,7 @@ func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
-//---------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------
 func (b *Block) KeyHash() common.Hash { return b.header.KeyHash }
 func (b *Block) KeyInfo() []byte      { return b.header.KeyInfo }
 func (b *Block) BlockType() uint8     { return b.header.BlockType }

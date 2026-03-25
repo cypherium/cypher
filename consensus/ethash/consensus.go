@@ -32,6 +32,7 @@ import (
 	"github.com/cypherium/cypher/core/state"
 	"github.com/cypherium/cypher/core/types"
 	"github.com/cypherium/cypher/core/vm"
+	"github.com/cypherium/cypher/crypto"
 	"github.com/cypherium/cypher/log"
 	"github.com/cypherium/cypher/params"
 	"github.com/cypherium/cypher/reconfig/bftview"
@@ -183,6 +184,83 @@ func (ethash *Ethash) VerifyCandidate(chain types.KeyChainReader, candidate *typ
 		return errInvalidPoW
 	}
 	return nil
+}
+
+// VerifyHeaderSeal checks whether the given normal block header satisfies
+// ethash/colossus PoW requirements.
+func (ethash *Ethash) VerifyHeaderSeal(header *types.Header) error {
+	// If we're running a fake PoW, accept any seal as valid
+	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
+		if ethash.fakeFail == header.Number.Uint64() {
+			return errInvalidPoW
+		}
+		return nil
+	}
+	// If we're running a shared PoW, delegate verification to it.
+	if ethash.shared != nil {
+		return ethash.shared.VerifyHeaderSeal(header)
+	}
+	if header.Difficulty == nil || header.Difficulty.Sign() <= 0 {
+		return errInvalidDifficulty
+	}
+	number := header.Number.Uint64()
+	cache := ethash.cache(number)
+	size := datasetSize(number)
+	if ethash.config.PowMode == ModeTest {
+		size = 32 * 1024
+	}
+	digest, result := hashimotoLight(size, cache.cache, header.SealHash().Bytes(), header.Nonce.Uint64())
+	runtime.KeepAlive(cache)
+
+	if !bytes.Equal(header.MixDigest[:], digest) {
+		return errInvalidMixDigest
+	}
+	target := new(big.Int).Div(maxUint256, header.Difficulty)
+	if new(big.Int).SetBytes(result).Cmp(target) > 0 {
+		return errInvalidPoW
+	}
+	return nil
+}
+
+// SealHeader searches a PoW nonce for a normal block header and fills
+// header.Nonce/header.MixDigest in-place.
+func (ethash *Ethash) SealHeader(header *types.Header, stop <-chan struct{}) error {
+	if header.Difficulty == nil || header.Difficulty.Sign() <= 0 {
+		return errInvalidDifficulty
+	}
+	// Fake modes don't need real mining work.
+	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
+		header.Nonce = types.EncodeNonce(1)
+		header.MixDigest = common.BytesToHash(crypto.Keccak256(header.SealHash().Bytes()))
+		return nil
+	}
+	if ethash.shared != nil {
+		return ethash.shared.SealHeader(header, stop)
+	}
+
+	number := header.Number.Uint64()
+	cache := ethash.cache(number)
+	size := datasetSize(number)
+	if ethash.config.PowMode == ModeTest {
+		size = 32 * 1024
+	}
+	target := new(big.Int).Div(maxUint256, header.Difficulty)
+	hash := header.SealHash().Bytes()
+
+	for nonce := uint64(0); ; nonce++ {
+		select {
+		case <-stop:
+			return errors.New("sealing aborted")
+		default:
+		}
+		digest, result := hashimotoLight(size, cache.cache, hash, nonce)
+		if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
+			header.Nonce = types.EncodeNonce(nonce)
+			header.MixDigest = common.BytesToHash(digest)
+			runtime.KeepAlive(cache)
+			return nil
+		}
+	}
 }
 
 // Prepare implements pow.Engine, initializing the difficulty field of a

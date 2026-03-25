@@ -35,6 +35,11 @@ import (
 	"github.com/cypherium/cypher/trie"
 )
 
+type normalBlockPowEngine interface {
+	SealHeader(header *types.Header, stop <-chan struct{}) error
+	VerifyHeaderSeal(header *types.Header) error
+}
+
 type txService struct {
 	s               serviceI
 	cph             *ReconfigBackend
@@ -123,14 +128,21 @@ func (txS *txService) tryProposalNewBlock(blockType uint8) ([]byte, error) {
 	header.Root = work.publicState.IntermediateRoot(false)
 	header.KeyHash = txS.kbc.CurrentBlock().Hash()
 
+	block := types.NewBlock(header, committedTxes, nil, publicReceipts, new(trie.Trie))
+
+	if blockType == types.Normal_Block {
+		var err error
+		block, err = txS.sealNormalBlock(block)
+		if err != nil {
+			return nil, fmt.Errorf("failed to seal normal block: %w", err)
+		}
+	}
 	// update block hash since it is now available, but was not when the
 	// receipt/log of individual transactions were created:
-	headerHash := header.Hash()
+	headerHash := block.Hash()
 	for _, l := range logs {
 		l.BlockHash = headerHash
 	}
-
-	block := types.NewBlock(header, committedTxes, nil, publicReceipts, new(trie.Trie))
 
 	log.Info("Generated next block", "block num", block.Number(), "num txes", txCount)
 
@@ -161,6 +173,11 @@ func (txS *txService) verifyTxBlock(txblock *types.Block) error {
 	if header.KeyHash != kbc.CurrentBlock().Hash() {
 		retErr = fmt.Errorf("keyhash:%x does not match current keyhash: %x", header.KeyHash, kbc.CurrentBlock().Hash())
 		return retErr
+	}
+	if txblock.BlockType() == types.Normal_Block {
+		if err := txS.verifyNormalBlockSeal(txblock); err != nil {
+			return fmt.Errorf("invalid normal block seal: %w", err)
+		}
 	}
 	if bftview.IamLeader(txS.s.GetCurrentView().LeaderIndex) {
 		return nil
@@ -198,6 +215,11 @@ func (txS *txService) verifyTxBlock(txblock *types.Block) error {
 // New txBlock done, when consensus agreement completed
 func (txS *txService) decideNewBlock(block *types.Block, sig []byte, mask []byte) error {
 	log.Info("decideNewBlock", "TxBlock Number", block.NumberU64(), "txs", len(block.Transactions()))
+	if block.BlockType() == types.Normal_Block {
+		if err := txS.verifyNormalBlockSeal(block); err != nil {
+			return fmt.Errorf("refuse normal block before insert: %w", err)
+		}
+	}
 	bc := txS.bc
 	if bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return nil
@@ -214,7 +236,35 @@ func (txS *txService) decideNewBlock(block *types.Block, sig []byte, mask []byte
 	return nil
 }
 
-//-----------------------------------------------------------------------------------------------------
+func (txS *txService) normalBlockPow() (normalBlockPowEngine, error) {
+	engine, ok := txS.cph.Engine().(normalBlockPowEngine)
+	if !ok {
+		return nil, fmt.Errorf("consensus engine does not support normal block PoW seal/verify")
+	}
+	return engine, nil
+}
+
+func (txS *txService) sealNormalBlock(block *types.Block) (*types.Block, error) {
+	pow, err := txS.normalBlockPow()
+	if err != nil {
+		return nil, err
+	}
+	header := block.Header()
+	if err := pow.SealHeader(header, nil); err != nil {
+		return nil, err
+	}
+	return block.WithSeal(header), nil
+}
+
+func (txS *txService) verifyNormalBlockSeal(block *types.Block) error {
+	pow, err := txS.normalBlockPow()
+	if err != nil {
+		return err
+	}
+	return pow.VerifyHeaderSeal(block.Header())
+}
+
+// -----------------------------------------------------------------------------------------------------
 func (txS *txService) procBlockDone(newBlock *types.Block) {
 	log.Info("chainBlockEvent...", "number", newBlock.NumberU64())
 	txS.txPool.RemoveBatch(newBlock.Transactions())
