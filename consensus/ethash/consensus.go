@@ -163,6 +163,21 @@ func (ethash *Ethash) VerifyCandidate(chain types.KeyChainReader, candidate *typ
 // VerifyKeyHeaderSeal checks whether the given key block header satisfies
 // ethash PoW requirements.
 func (ethash *Ethash) VerifyKeyHeaderSeal(header *types.KeyBlockHeader) error {
+	// If we're running a fake PoW, accept any seal as valid.
+	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
+		if ethash.fakeFail == header.Number.Uint64() {
+			return errInvalidPoW
+		}
+		return nil
+	}
+	// If we're running a shared PoW, delegate verification to it if supported.
+	if ethash.shared != nil {
+		if s, ok := interface{}(ethash.shared).(interface {
+			VerifyKeyHeaderSeal(*types.KeyBlockHeader) error
+		}); ok {
+			return s.VerifyKeyHeaderSeal(header)
+		}
+	}
 	if header.Difficulty == nil || header.Difficulty.Sign() <= 0 {
 		return errInvalidDifficulty
 	}

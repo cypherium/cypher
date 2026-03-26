@@ -1486,8 +1486,9 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	rawdb.WriteBlock(blockBatch, block)
 	rawdb.WriteReceipts(blockBatch, block.Hash(), block.NumberU64(), receipts)
 	rawdb.WritePreimages(blockBatch, state.Preimages())
+	var keyExternTd *big.Int
 	if embeddedKey != nil {
-		keyExternTd, err := bc.keyBlockChain.PrepareInsert(embeddedKey)
+		keyExternTd, err = bc.keyBlockChain.PrepareInsert(embeddedKey)
 		if err != nil {
 			return NonStatTy, err
 		}
@@ -1497,6 +1498,9 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	}
 	if err := blockBatch.Write(); err != nil {
 		log.Crit("Failed to write block into disk", "err", err)
+	}
+	if embeddedKey != nil {
+		bc.keyBlockChain.ApplyPrepared(embeddedKey, keyExternTd)
 	}
 	// Commit all cached state changes into underlying memory database.
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
