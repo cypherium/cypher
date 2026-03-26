@@ -1445,7 +1445,7 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.chainmu.Lock()
 	defer bc.chainmu.Unlock()
 
-	return bc.writeBlockWithState(block, receipts, logs, state, emitHeadEvent)
+	return bc.writeBlockWithState(block, receipts, logs, state, emitHeadEvent, nil)
 }
 
 // function specifically added for Raft consensus. This is called from mintNewBlock
@@ -1463,7 +1463,7 @@ func (bc *BlockChain) CommitBlockWithState(deleteEmptyObjects bool, state *state
 
 // writeBlockWithState writes the block and all associated state to the database,
 // but is expects the chain mutex to be held.
-func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, logs []*types.Log, state *state.StateDB, emitHeadEvent bool) (status WriteStatus, err error) {
+func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, logs []*types.Log, state *state.StateDB, emitHeadEvent bool, embeddedKey *types.KeyBlock) (status WriteStatus, err error) {
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
@@ -1486,6 +1486,15 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	rawdb.WriteBlock(blockBatch, block)
 	rawdb.WriteReceipts(blockBatch, block.Hash(), block.NumberU64(), receipts)
 	rawdb.WritePreimages(blockBatch, state.Preimages())
+	if embeddedKey != nil {
+		keyExternTd, err := bc.keyBlockChain.PrepareInsert(embeddedKey)
+		if err != nil {
+			return NonStatTy, err
+		}
+		if err := bc.keyBlockChain.InsertPrepared(blockBatch, embeddedKey, keyExternTd); err != nil {
+			return NonStatTy, err
+		}
+	}
 	if err := blockBatch.Write(); err != nil {
 		log.Crit("Failed to write block into disk", "err", err)
 	}
@@ -1950,19 +1959,19 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		}
 		// Write the block to the chain and get the status.
 		substart = time.Now()
-		status, err := bc.writeBlockWithState(block, receipts, logs, statedb, false)
+		var embeddedKey *types.KeyBlock
+		if block.BlockType() == types.Key_Block {
+			embeddedKey = types.DecodeToKeyBlock(block.KeyInfo())
+			if embeddedKey == nil {
+				atomic.StoreUint32(&followupInterrupt, 1)
+				return it.index, errors.New("embedded key block decode failed")
+			}
+		}
+		status, err := bc.writeBlockWithState(block, receipts, logs, statedb, false, embeddedKey)
 		atomic.StoreUint32(&followupInterrupt, 1)
 		if err != nil {
 			return it.index, err
 		}
-		//--write keyblock----------------------------------------------------------------------------------------------
-		if block.BlockType() == types.Key_Block {
-			err := bc.keyBlockChain.InsertBlockFromData(block.KeyInfo())
-			if err != nil {
-				return it.index, err
-			}
-		}
-		//------------------------------------------------------------------------------------------------
 		// Update the metrics touched during block commit
 		//accountCommitTimer.Update(statedb.AccountCommits)   // Account commits are complete, we can mark them
 		//storageCommitTimer.Update(statedb.StorageCommits)   // Storage commits are complete, we can mark them
