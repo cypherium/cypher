@@ -345,12 +345,11 @@ func (kbc *KeyBlockChain) InsertPrepared(batch ethdb.Batch, block *types.KeyBloc
 	}
 	rawdb.WriteTd(batch, block.Hash(), block.NumberU64(), externTd)
 	rawdb.WriteKeyBlock(batch, block)
-	rawdb.WriteKeyBlockHash(batch, block.Hash(), block.NumberU64())
 	return nil
 }
 
 // ApplyPrepared updates caches after the enclosing batch has been durably written
-// to disk. Head markers are only advanced when promoteHead is true.
+// to disk. Canonical key-chain markers are only advanced when promoteHead is true.
 func (kbc *KeyBlockChain) ApplyPrepared(block *types.KeyBlock, externTd *big.Int, promoteHead bool) error {
 	if block == nil || externTd == nil {
 		return nil
@@ -363,6 +362,7 @@ func (kbc *KeyBlockChain) ApplyPrepared(block *types.KeyBlock, externTd *big.Int
 	}
 
 	batch := kbc.db.NewBatch()
+	rawdb.WriteKeyBlockHash(batch, block.Hash(), block.NumberU64())
 	rawdb.WriteHeadKeyBlockHash(batch, block.Hash())
 	rawdb.WriteHeadKeyHeaderHash(batch, block.Hash())
 	if err := batch.Write(); err != nil {
