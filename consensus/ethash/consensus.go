@@ -488,16 +488,13 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		return consensus.ErrInvalidNumber
 	}
 
-	// Verify the engine specific seal securing normal blocks.
-	// Candidate/key block PoW remains on the separate VerifyCandidate path.
+	// Verify the engine specific seal securing the block.
+	// In UMA-PoW normal block headers use the Colossus path.
 	if seal {
 		if err := ethash.VerifyHeaderSeal(header); err != nil {
 			return err
 		}
 	}
-
-	// If all checks passed, validate any special fields for hard forks
-	// DAO/fork-specific checks are intentionally not enabled in this branch.
 	return nil
 }
 
