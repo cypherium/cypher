@@ -92,8 +92,8 @@ func (ethash *Ethash) SealCandidate(candidate *types.Candidate, stop <-chan stru
 	return result, nil
 }
 
-// mineCandidate is the actual proof-of-work miner that searches for a nonce starting from
-// seed that results in correct final block difficulty.
+// mineCandidate is the actual key-block Colossus proof-of-work miner that
+// searches for a nonce starting from seed that results in correct final block difficulty.
 func (ethash *Ethash) mineCandidate(candidate *types.Candidate, id int, seed uint64, abort chan struct{}, found chan *types.Candidate) {
 	// Extract some data from the header
 	var (
@@ -126,7 +126,7 @@ search:
 				attempts = 0
 			}
 			// Compute the PoW value of this nonce
-			digest, result := hashimotoFull(dataset.dataset, hash, nonce)
+			digest, result := colossusHashFull(dataset.dataset, hash, nonce)
 
 			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 				foundedTime := time.Now().Unix()
