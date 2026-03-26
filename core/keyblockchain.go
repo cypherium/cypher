@@ -203,7 +203,8 @@ func (kbc *KeyBlockChain) ResetWithGenesisBlock(genesis *types.KeyBlock) error {
 	}
 
 	batch := kbc.db.NewBatch()
-	rawdb.WriteTd(batch, genesis.Hash(), genesis.NumberU64(), genesis.Difficulty())
+	// Genesis block starts cumulative TD from its own difficulty.
+	rawdb.WriteTd(batch, genesis.Hash(), genesis.NumberU64(), new(big.Int).Set(genesis.Difficulty()))
 	rawdb.WriteKeyBlock(batch, genesis)
 	rawdb.WriteKeyBlockHash(batch, genesis.Hash(), genesis.NumberU64())
 	rawdb.WriteHeadKeyBlockHash(batch, genesis.Hash())
@@ -263,7 +264,19 @@ func (kbc *KeyBlockChain) loadLastState() error {
 // insert injects a new head keyblock into the current keyblock chain.
 // Note, this function assumes that the `mu` mutex is held!
 func (kbc *KeyBlockChain) insert(block *types.KeyBlock) error {
-	if err := kbc.khc.WriteTd(block.Hash(), block.NumberU64(), block.Difficulty()); err != nil {
+	var td *big.Int
+	if block.NumberU64() == 0 {
+		// Genesis block starts cumulative TD from its own difficulty.
+		td = new(big.Int).Set(block.Difficulty())
+	} else {
+		parentTd := kbc.GetTd(block.ParentHash(), block.NumberU64()-1)
+		if parentTd == nil {
+			return consensus.ErrUnknownAncestor
+		}
+		td = new(big.Int).Add(parentTd, block.Difficulty())
+	}
+
+	if err := kbc.khc.WriteTd(block.Hash(), block.NumberU64(), td); err != nil {
 		return err
 	}
 	rawdb.WriteKeyBlock(kbc.db, block)
