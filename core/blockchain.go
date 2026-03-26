@@ -1499,9 +1499,6 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	if err := blockBatch.Write(); err != nil {
 		log.Crit("Failed to write block into disk", "err", err)
 	}
-	if embeddedKey != nil {
-		bc.keyBlockChain.ApplyPrepared(embeddedKey, keyExternTd)
-	}
 	// Commit all cached state changes into underlying memory database.
 	root, err := state.Commit(bc.chainConfig.IsEIP158(block.Number()))
 	if err != nil {
@@ -1589,6 +1586,11 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 		status = CanonStatTy
 	} else {
 		status = SideStatTy
+	}
+	if embeddedKey != nil {
+		if err := bc.keyBlockChain.ApplyPrepared(embeddedKey, keyExternTd, status == CanonStatTy); err != nil {
+			return NonStatTy, err
+		}
 	}
 	// Set new head.
 	if status == CanonStatTy {
