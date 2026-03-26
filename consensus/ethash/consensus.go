@@ -60,7 +60,6 @@ var (
 
 	errOlderBlockTime      = errors.New("timestamp older than parent")
 	allowedFutureBlockTime = 5 * time.Minute // Max time from current time allowed for blocks, before they're considered future blocks
-
 )
 
 // CalcKeyBlockDifficulty is the difficulty adjustment algorithm. It returns
@@ -488,21 +487,16 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		return consensus.ErrInvalidNumber
 	}
 
-	/*??
-	// Verify the engine specific seal securing the block
+	// Verify the engine specific seal securing normal blocks.
+	// Candidate/key block PoW remains on the separate VerifyCandidate path.
 	if seal {
-		if err := ethash.VerifySeal(chain, header); err != nil {
+		if err := ethash.VerifyHeaderSeal(header); err != nil {
 			return err
 		}
 	}
+
 	// If all checks passed, validate any special fields for hard forks
-	if err := misc.VerifyDAOHeaderExtraData(chain.Config(), header); err != nil {
-		return err
-	}
-	if err := misc.VerifyForkHashes(chain.Config(), header, uncle); err != nil {
-		return err
-	}
-	*/
+	// DAO/fork-specific checks are intentionally not enabled in this branch.
 	return nil
 }
 
