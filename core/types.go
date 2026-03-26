@@ -33,6 +33,8 @@ type Validator interface {
 	// gas used.
 	ValidateState(block *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error
 
+	DecodeAndValidateEmbeddedKeyBlock(block *types.Block) error
+
 	VerifySignature(block *types.Block) error
 }
 
