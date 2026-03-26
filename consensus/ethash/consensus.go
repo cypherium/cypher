@@ -161,7 +161,7 @@ func (ethash *Ethash) VerifyCandidate(chain types.KeyChainReader, candidate *typ
 }
 
 // VerifyKeyHeaderSeal checks whether the given key block header satisfies
-// ethash PoW requirements.
+// the key-block Colossus PoW requirements.
 func (ethash *Ethash) VerifyKeyHeaderSeal(header *types.KeyBlockHeader) error {
 	// If we're running a fake PoW, accept any seal as valid.
 	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
@@ -191,9 +191,9 @@ func (ethash *Ethash) VerifyKeyHeaderSeal(header *types.KeyBlockHeader) error {
 	if ethash.config.PowMode == ModeTest {
 		size = 32 * 1024
 	}
-	digest, result := hashimotoLight(size, cache.cache, header.SealHash().Bytes(), header.Nonce.Uint64())
+	digest, result := colossusHashLight(size, cache.cache, header.SealHash().Bytes(), header.Nonce.Uint64())
 	// Caches are unmapped in a finalizer. Ensure that the cache stays live
-	// until after the call to hashimotoLight so it's not unmapped while being used.
+	// until after the call to colossusHashLight so it's not unmapped while being used.
 	runtime.KeepAlive(cache)
 
 	if !bytes.Equal(header.MixDigest[:], digest) {
