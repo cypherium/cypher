@@ -336,8 +336,8 @@ func (kbc *KeyBlockChain) PrepareInsert(block *types.KeyBlock) (*big.Int, error)
 	return externTd, nil
 }
 
-// InsertPrepared appends the key block write operations into batch and updates
-// in-memory key chain heads.
+// InsertPrepared appends the key block write operations into batch only.
+// In-memory heads must be updated only after the outer batch write succeeds.
 func (kbc *KeyBlockChain) InsertPrepared(batch ethdb.Batch, block *types.KeyBlock, externTd *big.Int) error {
 	if externTd == nil {
 		return nil
@@ -347,13 +347,19 @@ func (kbc *KeyBlockChain) InsertPrepared(batch ethdb.Batch, block *types.KeyBloc
 	rawdb.WriteKeyBlockHash(batch, block.Hash(), block.NumberU64())
 	rawdb.WriteHeadKeyBlockHash(batch, block.Hash())
 	rawdb.WriteHeadKeyHeaderHash(batch, block.Hash())
+	return nil
+}
 
+// ApplyPrepared updates in-memory key-chain state after the enclosing batch
+// has been durably written to disk.
+func (kbc *KeyBlockChain) ApplyPrepared(block *types.KeyBlock, externTd *big.Int) {
+	if block == nil || externTd == nil {
+		return
+	}
 	kbc.khc.tdCache.Add(block.Hash(), new(big.Int).Set(externTd))
 	kbc.blockCache.Add(block.Hash(), block)
 	kbc.currentBlock.Store(block)
-	kbc.khc.currentHeader.Store(block.Header())
-	kbc.khc.currentHeaderHash = block.Hash()
-	return nil
+	kbc.khc.SetCurrentHeader(block.Header())
 }
 
 // InsertChain attempts to insert the given batch of key blocks in to the keyblock
