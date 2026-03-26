@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/cypherium/cypher/common"
-	"github.com/cypherium/cypher/consensus/ethash"
+	"github.com/cypherium/cypher/consensus/colossusx"
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/eth/downloader"
 	"github.com/cypherium/cypher/eth/gasprice"
@@ -48,7 +48,7 @@ var DefaultLightGPOConfig = gasprice.Config{
 // DefaultConfig contains default settings for use on the Ethereum main net.
 var DefaultConfig = Config{
 	SyncMode: downloader.FastSync,
-	Ethash: ethash.Config{
+	Ethash: colossusx.Config{
 		CacheDir:         "ethash",
 		CachesInMem:      2,
 		CachesOnDisk:     3,
@@ -152,8 +152,9 @@ type Config struct {
 	// Mining options
 	Miner miner.Config
 
-	// Ethash options
-	Ethash ethash.Config
+	// Ethash-named config field kept for compatibility during the first
+	// split, but the concrete type now comes from consensus/colossusx.
+	Ethash colossusx.Config
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig

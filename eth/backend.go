@@ -32,7 +32,7 @@ import (
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/common/hexutil"
 	"github.com/cypherium/cypher/consensus"
-	"github.com/cypherium/cypher/consensus/ethash"
+	"github.com/cypherium/cypher/consensus/colossusx"
 
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/core/bloombits"
@@ -285,7 +285,7 @@ func makeExtraData(extra []byte, hasPrivate bool) []byte {
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *Config) consensus.Engine {
 	s := config.Ethash
-	engine := ethash.New(ethash.Config{
+	engine := colossusx.New(colossusx.Config{
 		CacheDir:       stack.ResolvePath(s.CacheDir),
 		CachesInMem:    s.CachesInMem,
 		CachesOnDisk:   s.CachesOnDisk,
@@ -293,7 +293,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		DatasetsInMem:  s.DatasetsInMem,
 		DatasetsOnDisk: s.DatasetsOnDisk,
 	})
-	//	engine := ethash.NewNormal()
+	//	engine := colossusx.NewNormal()
 	engine.SetThreads(-1) // Disable CPU mining
 	return engine
 }

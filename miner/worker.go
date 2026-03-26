@@ -16,7 +16,7 @@ import (
 	"github.com/cypherium/cypher/reconfig/bftview"
 
 	"github.com/cypherium/cypher/consensus"
-	"github.com/cypherium/cypher/consensus/ethash"
+	"github.com/cypherium/cypher/consensus/colossusx"
 	"github.com/cypherium/cypher/ethdb"
 	"github.com/cypherium/cypher/event"
 	"github.com/cypherium/cypher/log"
@@ -242,7 +242,7 @@ func (self *worker) wait() {
 				}
 			}
 
-			if ethash.Mode(self.engine.PowMode()) == ethash.ModeLocalMock {
+			if colossusx.Mode(self.engine.PowMode()) == colossusx.ModeLocalMock {
 				self.LocalMockAutoTrigNextTermPow(candidate)
 			}
 
@@ -286,7 +286,7 @@ func (self *worker) commitNewWork() {
 		log.Error("worker.commitNewWork is too low", "number", txBlock.NumberU64())
 		return
 	}
-	if ethash.Mode(self.engine.PowMode()) != ethash.ModeLocalMock {
+	if colossusx.Mode(self.engine.PowMode()) != colossusx.ModeLocalMock {
 		if self.candidatePool.FoundCandidate(keyBlock.Number(), string(self.pubKey)) {
 			log.Trace("Found existing candidate of head key block")
 			return
