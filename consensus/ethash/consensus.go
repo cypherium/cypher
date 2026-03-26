@@ -264,6 +264,8 @@ func (ethash *Ethash) SealHeader(header *types.Header, stop <-chan struct{}) err
 	hash := header.SealHash().Bytes()
 	dataset := ethash.dataset(number)
 	defer runtime.KeepAlive(dataset)
+	scratchpad := colossusAcquireScratchpad()
+	defer colossusReleaseScratchpad(scratchpad)
 
 	for nonce := uint64(0); ; nonce++ {
 		select {
@@ -271,7 +273,7 @@ func (ethash *Ethash) SealHeader(header *types.Header, stop <-chan struct{}) err
 			return errors.New("sealing aborted")
 		default:
 		}
-		digest, result := colossusHashFull(dataset.dataset, hash, nonce)
+		digest, result := colossusHashFullWithScratchpad(scratchpad, dataset.dataset, hash, nonce)
 		if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 			header.Nonce = types.EncodeNonce(nonce)
 			header.MixDigest = common.BytesToHash(digest)
