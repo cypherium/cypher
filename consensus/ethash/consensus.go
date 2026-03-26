@@ -157,28 +157,33 @@ func (ethash *Ethash) VerifyCandidate(chain types.KeyChainReader, candidate *typ
 	if ethash.shared != nil {
 		return ethash.shared.VerifyCandidate(chain, candidate)
 	}
-	// Ensure that we have a valid difficulty for the block
-	if candidate.KeyCandidate.Difficulty == nil || candidate.KeyCandidate.Difficulty.Sign() <= 0 {
+	return ethash.VerifyKeyHeaderSeal(candidate.KeyCandidate)
+}
+
+// VerifyKeyHeaderSeal checks whether the given key block header satisfies
+// ethash PoW requirements.
+func (ethash *Ethash) VerifyKeyHeaderSeal(header *types.KeyBlockHeader) error {
+	if header.Difficulty == nil || header.Difficulty.Sign() <= 0 {
 		return errInvalidDifficulty
 	}
-	// Recompute the digest and PoW value and verify against the header
-	number := candidate.KeyCandidate.Number.Uint64()
+	// Recompute the digest and PoW value and verify against the header.
+	number := header.Number.Uint64()
 
 	cache := ethash.cache(number)
 	size := datasetSize(number)
 	if ethash.config.PowMode == ModeTest {
 		size = 32 * 1024
 	}
-	digest, result := hashimotoLight(size, cache.cache, candidate.HashNoNonce().Bytes(), candidate.KeyCandidate.Nonce.Uint64())
+	digest, result := hashimotoLight(size, cache.cache, header.SealHash().Bytes(), header.Nonce.Uint64())
 	// Caches are unmapped in a finalizer. Ensure that the cache stays live
 	// until after the call to hashimotoLight so it's not unmapped while being used.
 	runtime.KeepAlive(cache)
 
-	if !bytes.Equal(candidate.KeyCandidate.MixDigest[:], digest) {
+	if !bytes.Equal(header.MixDigest[:], digest) {
 		return errInvalidMixDigest
 	}
 
-	target := new(big.Int).Div(maxUint256, candidate.KeyCandidate.Difficulty)
+	target := new(big.Int).Div(maxUint256, header.Difficulty)
 	if new(big.Int).SetBytes(result).Cmp(target) > 0 {
 		return errInvalidPoW
 	}
