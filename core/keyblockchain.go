@@ -5,6 +5,7 @@ import (
 
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"errors"
 	"fmt"
@@ -22,6 +23,10 @@ import (
 	"github.com/cypherium/cypher/rlp"
 	lru "github.com/hashicorp/golang-lru"
 )
+
+type keyHeaderSealVerifier interface {
+	VerifyKeyHeaderSeal(header *types.KeyBlockHeader) error
+}
 
 var (
 	ErrNoKeyGenesis   = errors.New("Genesis not found in key block chain")
@@ -466,8 +471,38 @@ func (kbc *KeyBlockChain) ValidateKeyBlock(block *types.KeyBlock) error {
 		return types.ErrKnownBlock
 	}
 
+	if blockNumber == 0 {
+		return types.ErrInvalidNumber
+	}
 	if !kbc.HasBlock(block.ParentHash(), blockNumber-1) {
 		return types.ErrUnknownAncestor
+	}
+
+	parent := kbc.GetHeader(block.ParentHash(), blockNumber-1)
+	if parent == nil {
+		return types.ErrUnknownAncestor
+	}
+	header := block.Header()
+	if header.Time <= parent.Time {
+		return fmt.Errorf("invalid keyblock timestamp: parent %d, current %d", parent.Time, header.Time)
+	}
+	if header.Time > uint64(time.Now().Unix())+kbc.chainConfig.AllowedFutureBlockTime {
+		return types.ErrFutureBlock
+	}
+	expectedDiff := kbc.engine.CalcKeyBlockDifficulty(kbc, header.Time, parent)
+	if expectedDiff == nil || header.Difficulty == nil || expectedDiff.Cmp(header.Difficulty) != 0 {
+		return fmt.Errorf("invalid keyblock difficulty: have %v, want %v", header.Difficulty, expectedDiff)
+	}
+
+	sealVerifier, ok := kbc.engine.(keyHeaderSealVerifier)
+	if !ok {
+		return fmt.Errorf("consensus engine does not support key header seal verification")
+	}
+	if err := sealVerifier.VerifyKeyHeaderSeal(header); err != nil {
+		return err
+	}
+	if !block.TypeCheck(parent.T_Number) {
+		return fmt.Errorf("invalid keyblock type: block type=%d t_number=%d parent_t_number=%d", block.BlockType(), block.T_Number(), parent.T_Number)
 	}
 	return nil
 }
