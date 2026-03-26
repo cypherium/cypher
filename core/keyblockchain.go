@@ -193,7 +193,27 @@ func (kbc *KeyBlockChain) Reset() error {
 // ResetWithGenesisBlock purges the entire blockchain, restoring it to the
 // specified genesis state.
 func (kbc *KeyBlockChain) ResetWithGenesisBlock(genesis *types.KeyBlock) error {
+	if genesis == nil {
+		return ErrNoKeyGenesis
+	}
 
+	batch := kbc.db.NewBatch()
+	rawdb.WriteTd(batch, genesis.Hash(), genesis.NumberU64(), genesis.Difficulty())
+	rawdb.WriteKeyBlock(batch, genesis)
+	rawdb.WriteKeyBlockHash(batch, genesis.Hash(), genesis.NumberU64())
+	rawdb.WriteHeadKeyBlockHash(batch, genesis.Hash())
+	rawdb.WriteHeadKeyHeaderHash(batch, genesis.Hash())
+	if err := batch.Write(); err != nil {
+		return err
+	}
+
+	kbc.genesisBlock = genesis
+	kbc.currentBlock.Store(genesis)
+	kbc.khc.SetGenesis(genesis.Header())
+	kbc.khc.SetCurrentHeader(genesis.Header())
+
+	kbc.blockCache.Purge()
+	kbc.blockRLPCache.Purge()
 	return nil
 }
 
@@ -219,7 +239,7 @@ func (kbc *KeyBlockChain) loadLastState() error {
 	kbc.currentBlock.Store(currentBlock)
 	// Restore the last known head header
 	currentHeader := currentBlock.Header()
-	if head := rawdb.ReadHeadHeaderHash(kbc.db); head != (common.Hash{}) {
+	if head := rawdb.ReadHeadKeyHeaderHash(kbc.db); head != (common.Hash{}) {
 		if header := kbc.GetHeaderByHash(head); header != nil {
 			currentHeader = header
 		}
@@ -255,6 +275,7 @@ func (kbc *KeyBlockChain) InsertBlockFromData(data []byte) error {
 	b := types.DecodeToKeyBlock(data)
 	if b == nil {
 		log.Error("InsertBlockFromData DecodeToKeyBlock return nil")
+		return errors.New("insert key block from data: decode failed")
 	}
 	_, err := kbc.insert_Chain(types.KeyBlocks{b})
 	if err != nil {
