@@ -337,7 +337,8 @@ func (kbc *KeyBlockChain) PrepareInsert(block *types.KeyBlock) (*big.Int, error)
 }
 
 // InsertPrepared appends the key block write operations into batch only.
-// In-memory heads must be updated only after the outer batch write succeeds.
+// It must not advance key-chain head markers yet because the enclosing
+// normal block may still end up as a side block.
 func (kbc *KeyBlockChain) InsertPrepared(batch ethdb.Batch, block *types.KeyBlock, externTd *big.Int) error {
 	if externTd == nil {
 		return nil
@@ -345,21 +346,32 @@ func (kbc *KeyBlockChain) InsertPrepared(batch ethdb.Batch, block *types.KeyBloc
 	rawdb.WriteTd(batch, block.Hash(), block.NumberU64(), externTd)
 	rawdb.WriteKeyBlock(batch, block)
 	rawdb.WriteKeyBlockHash(batch, block.Hash(), block.NumberU64())
-	rawdb.WriteHeadKeyBlockHash(batch, block.Hash())
-	rawdb.WriteHeadKeyHeaderHash(batch, block.Hash())
 	return nil
 }
 
-// ApplyPrepared updates in-memory key-chain state after the enclosing batch
-// has been durably written to disk.
-func (kbc *KeyBlockChain) ApplyPrepared(block *types.KeyBlock, externTd *big.Int) {
+// ApplyPrepared updates caches after the enclosing batch has been durably written
+// to disk. Head markers are only advanced when promoteHead is true.
+func (kbc *KeyBlockChain) ApplyPrepared(block *types.KeyBlock, externTd *big.Int, promoteHead bool) error {
 	if block == nil || externTd == nil {
-		return
+		return nil
 	}
 	kbc.khc.tdCache.Add(block.Hash(), new(big.Int).Set(externTd))
 	kbc.blockCache.Add(block.Hash(), block)
+
+	if !promoteHead {
+		return nil
+	}
+
+	batch := kbc.db.NewBatch()
+	rawdb.WriteHeadKeyBlockHash(batch, block.Hash())
+	rawdb.WriteHeadKeyHeaderHash(batch, block.Hash())
+	if err := batch.Write(); err != nil {
+		return err
+	}
+
 	kbc.currentBlock.Store(block)
 	kbc.khc.SetCurrentHeader(block.Header())
+	return nil
 }
 
 // InsertChain attempts to insert the given batch of key blocks in to the keyblock

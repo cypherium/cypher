@@ -170,13 +170,15 @@ func (ethash *Ethash) VerifyKeyHeaderSeal(header *types.KeyBlockHeader) error {
 		}
 		return nil
 	}
-	// If we're running a shared PoW, delegate verification to it if supported.
+	// If we're running a shared PoW, delegation must be supported too.
+	// Otherwise candidate verification and key-header verification can diverge.
 	if ethash.shared != nil {
 		if s, ok := interface{}(ethash.shared).(interface {
 			VerifyKeyHeaderSeal(*types.KeyBlockHeader) error
 		}); ok {
 			return s.VerifyKeyHeaderSeal(header)
 		}
+		return fmt.Errorf("shared consensus engine does not support key header seal verification")
 	}
 	if header.Difficulty == nil || header.Difficulty.Sign() <= 0 {
 		return errInvalidDifficulty
