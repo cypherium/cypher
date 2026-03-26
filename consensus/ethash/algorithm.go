@@ -61,6 +61,23 @@ const (
 	colossusDomainTag       = "COLXH1"
 )
 
+var colossusScratchpadPool = sync.Pool{
+	New: func() interface{} {
+		return make([]uint32, colossusScratchpadWords)
+	},
+}
+
+func colossusAcquireScratchpad() []uint32 {
+	return colossusScratchpadPool.Get().([]uint32)
+}
+
+func colossusReleaseScratchpad(scratchpad []uint32) {
+	if cap(scratchpad) < colossusScratchpadWords {
+		return
+	}
+	colossusScratchpadPool.Put(scratchpad[:colossusScratchpadWords])
+}
+
 // cacheSize returns the size of the ethash verification cache that belongs to a certain
 // block number.
 func cacheSize(block uint64) uint64 {
@@ -468,7 +485,7 @@ func colossusLookupPageLight(cache []uint32, pageIndex uint32, keccak512 hasher,
 	}
 }
 
-func colossusHashCore(numPages uint32, sealHash []byte, nonce uint64, pageLookup func(pageIndex uint32, out *[colossusPageWords]uint32)) ([]byte, []byte) {
+func colossusHashCoreWithScratchpad(scratchpad []uint32, numPages uint32, sealHash []byte, nonce uint64, pageLookup func(pageIndex uint32, out *[colossusPageWords]uint32)) ([]byte, []byte) {
 	nonceLE := colossusNonceLE(nonce)
 	seed := crypto.Keccak512([]byte(colossusDomainTag), sealHash, nonceLE[:])
 
@@ -478,7 +495,7 @@ func colossusHashCore(numPages uint32, sealHash []byte, nonce uint64, pageLookup
 		acc[i] = state[i] ^ state[i+colossusAccWords]
 	}
 
-	scratchpad := make([]uint32, colossusScratchpadWords)
+	scratchpad = scratchpad[:colossusScratchpadWords]
 	for k := uint32(0); k < colossusScratchpadWords; k++ {
 		idx := k % colossusStateWords
 		x := state[idx]
@@ -540,20 +557,34 @@ func colossusHashCore(numPages uint32, sealHash []byte, nonce uint64, pageLookup
 	return mixDigest, result
 }
 
-func colossusHashLight(size uint64, cache []uint32, sealHash []byte, nonce uint64) ([]byte, []byte) {
+func colossusHashLightWithScratchpad(scratchpad []uint32, size uint64, cache []uint32, sealHash []byte, nonce uint64) ([]byte, []byte) {
 	numPages := colossusNumPages(size)
 	keccak512 := makeHasher(sha3.NewLegacyKeccak512())
-	return colossusHashCore(numPages, sealHash, nonce, func(pageIndex uint32, out *[colossusPageWords]uint32) {
+	return colossusHashCoreWithScratchpad(scratchpad, numPages, sealHash, nonce, func(pageIndex uint32, out *[colossusPageWords]uint32) {
 		colossusLookupPageLight(cache, pageIndex, keccak512, out)
 	})
 }
 
-func colossusHashFull(dataset []uint32, sealHash []byte, nonce uint64) ([]byte, []byte) {
+func colossusHashLight(size uint64, cache []uint32, sealHash []byte, nonce uint64) ([]byte, []byte) {
+	scratchpad := colossusAcquireScratchpad()
+	defer colossusReleaseScratchpad(scratchpad)
+
+	return colossusHashLightWithScratchpad(scratchpad, size, cache, sealHash, nonce)
+}
+
+func colossusHashFullWithScratchpad(scratchpad []uint32, dataset []uint32, sealHash []byte, nonce uint64) ([]byte, []byte) {
 	datasetWords := len(dataset) - (len(dataset) % colossusPageWords)
 	numPages := uint32(datasetWords / colossusPageWords)
-	return colossusHashCore(numPages, sealHash, nonce, func(pageIndex uint32, out *[colossusPageWords]uint32) {
+	return colossusHashCoreWithScratchpad(scratchpad, numPages, sealHash, nonce, func(pageIndex uint32, out *[colossusPageWords]uint32) {
 		colossusLookupPageFull(dataset[:datasetWords], pageIndex, out)
 	})
+}
+
+func colossusHashFull(dataset []uint32, sealHash []byte, nonce uint64) ([]byte, []byte) {
+	scratchpad := colossusAcquireScratchpad()
+	defer colossusReleaseScratchpad(scratchpad)
+
+	return colossusHashFullWithScratchpad(scratchpad, dataset, sealHash, nonce)
 }
 
 // maxEpoch bounds the pre-generated future cache/dataset epoch in the LRU.

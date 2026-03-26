@@ -97,11 +97,13 @@ func (ethash *Ethash) SealCandidate(candidate *types.Candidate, stop <-chan stru
 func (ethash *Ethash) mineCandidate(candidate *types.Candidate, id int, seed uint64, abort chan struct{}, found chan *types.Candidate) {
 	// Extract some data from the header
 	var (
-		hash    = candidate.KeyCandidate.SealHash().Bytes()
-		target  = new(big.Int).Div(maxUint256, candidate.KeyCandidate.Difficulty)
-		number  = candidate.KeyCandidate.Number.Uint64()
-		dataset = ethash.dataset(number)
+		hash       = candidate.KeyCandidate.SealHash().Bytes()
+		target     = new(big.Int).Div(maxUint256, candidate.KeyCandidate.Difficulty)
+		number     = candidate.KeyCandidate.Number.Uint64()
+		dataset    = ethash.dataset(number)
+		scratchpad = colossusAcquireScratchpad()
 	)
+	defer colossusReleaseScratchpad(scratchpad)
 	// Start generating random nonces until we abort or find a good one
 	var (
 		attempts = int64(0)
@@ -126,7 +128,7 @@ search:
 				attempts = 0
 			}
 			// Compute the PoW value of this nonce
-			digest, result := colossusHashFull(dataset.dataset, hash, nonce)
+			digest, result := colossusHashFullWithScratchpad(scratchpad, dataset.dataset, hash, nonce)
 
 			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 				foundedTime := time.Now().Unix()
