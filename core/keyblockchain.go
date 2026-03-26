@@ -310,6 +310,52 @@ func (kbc *KeyBlockChain) InsertBlockFromData(data []byte) error {
 	return err
 }
 
+// PrepareInsert validates a key block and prepares its cumulative TD for insertion.
+// A nil externTd means the block is already known and no insertion is needed.
+func (kbc *KeyBlockChain) PrepareInsert(block *types.KeyBlock) (*big.Int, error) {
+	err := kbc.ValidateKeyBlock(block)
+	switch {
+	case err == types.ErrKnownBlock:
+		if kbc.CurrentBlockN() >= block.NumberU64() {
+			return nil, nil
+		}
+	case err != nil:
+		return nil, err
+	}
+
+	var externTd *big.Int
+	if block.NumberU64() == 0 {
+		externTd = new(big.Int).Set(block.Difficulty())
+	} else {
+		parentTd := kbc.GetTd(block.ParentHash(), block.NumberU64()-1)
+		if parentTd == nil {
+			return nil, consensus.ErrUnknownAncestor
+		}
+		externTd = new(big.Int).Add(parentTd, block.Difficulty())
+	}
+	return externTd, nil
+}
+
+// InsertPrepared appends the key block write operations into batch and updates
+// in-memory key chain heads.
+func (kbc *KeyBlockChain) InsertPrepared(batch ethdb.Batch, block *types.KeyBlock, externTd *big.Int) error {
+	if externTd == nil {
+		return nil
+	}
+	rawdb.WriteTd(batch, block.Hash(), block.NumberU64(), externTd)
+	rawdb.WriteKeyBlock(batch, block)
+	rawdb.WriteKeyBlockHash(batch, block.Hash(), block.NumberU64())
+	rawdb.WriteHeadKeyBlockHash(batch, block.Hash())
+	rawdb.WriteHeadKeyHeaderHash(batch, block.Hash())
+
+	kbc.khc.tdCache.Add(block.Hash(), new(big.Int).Set(externTd))
+	kbc.blockCache.Add(block.Hash(), block)
+	kbc.currentBlock.Store(block)
+	kbc.khc.currentHeader.Store(block.Header())
+	kbc.khc.currentHeaderHash = block.Hash()
+	return nil
+}
+
 // InsertChain attempts to insert the given batch of key blocks in to the keyblock
 // chain. If an error is returned it will return the index number of the failing block
 // as well an error describing what went wrong.
