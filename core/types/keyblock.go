@@ -57,6 +57,23 @@ func (h *KeyBlockHeader) HashWithCandi() common.Hash {
 	})
 }
 
+// SealHash returns the canonical key-block PoW preimage.
+//
+// The seal hash intentionally excludes PoW seal fields (MixDigest, Nonce) and
+// only includes canonical key-block header fields that can be reconstructed
+// from chain data.
+func (h *KeyBlockHeader) SealHash() common.Hash {
+	return rlpHash([]interface{}{
+		h.ParentHash,
+		h.Difficulty,
+		h.Number,
+		h.Time,
+		h.BlockType,
+		h.CommitteeHash,
+		h.T_Number,
+	})
+}
+
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *KeyBlockHeader) Size() common.StorageSize {
