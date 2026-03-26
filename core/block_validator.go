@@ -181,3 +181,20 @@ func (v *BlockValidator) VerifySignature(block *types.Block) error {
 	}
 	return nil
 }
+
+func (v *BlockValidator) DecodeAndValidateEmbeddedKeyBlock(block *types.Block) error {
+	if block.BlockType() != types.Key_Block {
+		return nil
+	}
+	if len(block.KeyInfo()) == 0 {
+		return fmt.Errorf("key block info is required for key block %x", block.Hash())
+	}
+	if v.bc == nil || v.bc.keyBlockChain == nil {
+		return fmt.Errorf("key block chain is not initialized")
+	}
+	kb := types.DecodeToKeyBlock(block.KeyInfo())
+	if kb == nil {
+		return fmt.Errorf("embedded key block decode failed")
+	}
+	return v.bc.keyBlockChain.ValidateKeyBlock(kb)
+}

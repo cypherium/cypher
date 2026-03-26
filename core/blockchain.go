@@ -1944,6 +1944,10 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool, verifySi
 		storageHashTimer.Update(statedb.StorageHashes) // Storage hashes are complete, we can mark them
 
 		blockValidationTimer.Update(time.Since(substart) - (statedb.AccountHashes + statedb.StorageHashes - triehash))
+		if err := bc.validator.DecodeAndValidateEmbeddedKeyBlock(block); err != nil {
+			atomic.StoreUint32(&followupInterrupt, 1)
+			return it.index, err
+		}
 		// Write the block to the chain and get the status.
 		substart = time.Now()
 		status, err := bc.writeBlockWithState(block, receipts, logs, statedb, false)
