@@ -82,6 +82,10 @@ var (
 	errInsertionInterrupted = errors.New("insertion is interrupted")
 )
 
+type headerSealVerifier interface {
+	VerifyHeaderSeal(header *types.Header) error
+}
+
 const (
 	bodyCacheLimit      = 128
 	blockCacheLimit     = 128
@@ -323,10 +327,13 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 			}
 		}
 	}
-	// The first thing the node will do is reconstruct the verification data for
-	// the head block (ethash cache or clique voting snapshot). Might as well do
-	// it in advance.
-	if err := bc.engine.VerifyHeader(bc, bc.CurrentHeader(), true); err != nil {
+	// Verify the head seal directly so startup self-check is not short-circuited
+	// by known-header fast paths in VerifyHeader.
+	sealVerifier, ok := bc.engine.(headerSealVerifier)
+	if !ok {
+		return nil, fmt.Errorf("consensus engine does not support header seal verification")
+	}
+	if err := sealVerifier.VerifyHeaderSeal(bc.CurrentHeader()); err != nil {
 		return nil, err
 	}
 

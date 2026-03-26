@@ -107,6 +107,14 @@ func NewKeyBlockChain(cph Backend, db ethdb.Database, cacheConfig *CacheConfig, 
 	if err := kbc.loadLastState(); err != nil {
 		return nil, err
 	}
+	currentHeader := kbc.CurrentHeader()
+	sealVerifier, ok := kbc.engine.(keyHeaderSealVerifier)
+	if !ok {
+		return nil, fmt.Errorf("consensus engine does not support key header seal verification")
+	}
+	if err := sealVerifier.VerifyKeyHeaderSeal(currentHeader); err != nil {
+		return nil, err
+	}
 
 	return kbc, nil
 }
