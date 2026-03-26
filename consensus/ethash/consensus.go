@@ -158,7 +158,7 @@ func (ethash *Ethash) VerifyCandidate(chain types.KeyChainReader, candidate *typ
 		return ethash.shared.VerifyCandidate(chain, candidate)
 	}
 	// Ensure that we have a valid difficulty for the block
-	if candidate.KeyCandidate.Difficulty.Sign() <= 0 {
+	if candidate.KeyCandidate.Difficulty == nil || candidate.KeyCandidate.Difficulty.Sign() <= 0 {
 		return errInvalidDifficulty
 	}
 	// Recompute the digest and PoW value and verify against the header
@@ -445,23 +445,24 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		return fmt.Errorf("extra-data too long: %d > %d", len(header.Extra), params.MaximumExtraDataSize)
 	}
 	// Verify the header's timestamp
-	//if !uncle {
-	//	log.Info("verifyHeader", "header.Time", header.Time, "future time", uint64(time.Now().Add(allowedFutureBlockTime).Unix()))
-	//	if header.Time > uint64(time.Now().Add(allowedFutureBlockTime).Unix()) {
-	//		return consensus.ErrFutureBlock
-	//	}
-	//}
+	if !uncle {
+		if header.Time > uint64(time.Now().Add(allowedFutureBlockTime).Unix()) {
+			return consensus.ErrFutureBlock
+		}
+	}
 	if header.Time <= parent.Time {
 		return errOlderBlockTime
 	}
-	/*?? should verify the refer's keyblock difficulty
-	// Verify the block's difficulty based on its timestamp and parent's difficulty
-	expected := ethash.CalcDifficulty(chain, header.Time, parent)
 
+	// Verify the block's difficulty based on its timestamp and parent's difficulty
+	if header.Difficulty == nil || header.Difficulty.Sign() <= 0 {
+		return errInvalidDifficulty
+	}
+	expected := ethash.CalcDifficulty(chain, header.Time, parent)
 	if expected.Cmp(header.Difficulty) != 0 {
 		return fmt.Errorf("invalid difficulty: have %v, want %v", header.Difficulty, expected)
 	}
-	*/
+
 	// Verify that the gas limit is <= 2^63-1
 	cap := uint64(0x7fffffffffffffff)
 	if header.GasLimit > cap {
