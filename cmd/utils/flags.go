@@ -36,7 +36,7 @@ import (
 	"github.com/cypherium/cypher/accounts/keystore"
 	"github.com/cypherium/cypher/common"
 	"github.com/cypherium/cypher/common/fdlimit"
-	"github.com/cypherium/cypher/consensus/ethash"
+	"github.com/cypherium/cypher/consensus/colossusx"
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/core/rawdb"
 	"github.com/cypherium/cypher/core/vm"
@@ -1880,7 +1880,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readOnly bool, useExist bool)
 		}
 	}
 
-	engine := ethash.NewFullFaker()
+	engine := colossusx.NewFullFaker()
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}
