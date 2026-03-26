@@ -97,7 +97,7 @@ func (ethash *Ethash) SealCandidate(candidate *types.Candidate, stop <-chan stru
 func (ethash *Ethash) mineCandidate(candidate *types.Candidate, id int, seed uint64, abort chan struct{}, found chan *types.Candidate) {
 	// Extract some data from the header
 	var (
-		hash    = candidate.HashNoNonce().Bytes()
+		hash    = candidate.KeyCandidate.SealHash().Bytes()
 		target  = new(big.Int).Div(maxUint256, candidate.KeyCandidate.Difficulty)
 		number  = candidate.KeyCandidate.Number.Uint64()
 		dataset = ethash.dataset(number)
