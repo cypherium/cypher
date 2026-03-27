@@ -230,6 +230,7 @@ func init() {
 		dumpCommand,
 		dumpGenesisCommand,
 		inspectCommand,
+		resealKeyGenesisCommand,
 		// See accountcmd.go:
 		accountCommand,
 		walletCommand,
