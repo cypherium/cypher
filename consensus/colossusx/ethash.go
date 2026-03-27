@@ -165,7 +165,7 @@ func newlru(what string, maxItems int, new func(epoch uint64) interface{}) *lru 
 		maxItems = 1
 	}
 	cache, _ := simplelru.NewLRU(maxItems, func(key, value interface{}) {
-		log.Trace("Evicted ethash "+what, "epoch", key)
+		log.Trace("Evicted colossusx "+what, "epoch", key)
 	})
 	return &lru{what: what, new: new, cache: cache}
 }
@@ -183,7 +183,7 @@ func (lru *lru) get(epoch uint64) (item, future interface{}) {
 		if lru.future > 0 && lru.future == epoch {
 			item = lru.futureItem
 		} else {
-			log.Trace("Requiring new ethash "+lru.what, "epoch", epoch)
+			log.Trace("Requiring new colossusx "+lru.what, "epoch", epoch)
 			item = lru.new(epoch)
 		}
 		lru.cache.Add(epoch, item)
@@ -243,7 +243,7 @@ func (c *cache) generate(dir string, limit int, test bool) {
 		var err error
 		c.dump, c.mmap, c.cache, err = memoryMap(path)
 		if err == nil {
-			logger.Debug("Loaded old ethash cache from disk")
+			logger.Debug("Loaded old colossusx cache from disk")
 			return
 		}
 		logger.Debug("Failed to load old ethash cache", "err", err)
@@ -324,7 +324,7 @@ func (d *dataset) generate(dir string, limit int, test bool) {
 		var err error
 		d.dump, d.mmap, d.dataset, err = memoryMap(path)
 		if err == nil {
-			logger.Debug("Loaded old ethash dataset from disk")
+			logger.Debug("Loaded old colossusx dataset from disk")
 			return
 		}
 		logger.Debug("Failed to load old ethash dataset", "err", err)
@@ -428,7 +428,7 @@ func New(config Config) *Ethash {
 		log.Debug("Disk storage enabled for ethash caches", "dir", config.CacheDir, "count", config.CachesOnDisk)
 	}
 	if config.DatasetDir != "" && config.DatasetsOnDisk > 0 {
-		log.Debug("Disk storage enabled for ethash DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
+		log.Debug("Disk storage enabled for colossusx datasets", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
 	}
 	//config.PowMode = ModeLocalMock
 	return &Ethash{
