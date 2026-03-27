@@ -36,7 +36,7 @@ import (
 
 const (
 	datasetInitBytes   = 1 << 32 // Bytes in dataset at genesis
-	datasetGrowthBytes = 1 << 23 // Dataset growth per epoch
+	datasetGrowthBytes = 64 * 1024 * 1024 // Dataset growth per epoch
 	cacheInitBytes     = 1 << 26 // Bytes in cache at genesis
 	cacheGrowthBytes   = 1 << 17 // Cache growth per epoch
 	epochLength        = 16166   // Blocks per epoch
@@ -49,7 +49,7 @@ const (
 
 	colossusPageBytes       = 512
 	colossusTileBytes       = 512
-	colossusScratchpadBytes = 8 * 1024 * 1024
+	colossusScratchpadBytes = 64 * 1024 * 1024
 	colossusScratchpadWords = colossusScratchpadBytes / 4
 	colossusPageWords       = colossusPageBytes / 4
 	colossusTileWords       = colossusTileBytes / 4
@@ -505,20 +505,31 @@ func colossusHashCoreWithScratchpad(scratchpad []uint32, numPages uint32, sealHa
 		scratchpad[k] = state[idx] ^ fnv(z, x+y)
 	}
 
-	var page [colossusPageWords]uint32
+	var page0 [colossusPageWords]uint32
+	var page1 [colossusPageWords]uint32
 	var tile [colossusTileWords]uint32
 	for r := uint32(0); r < colossusRounds; r++ {
 		a := state[r%colossusStateWords]
 		b := state[(r+5)%colossusStateWords]
 		c := acc[r%colossusAccWords]
+		a2 := state[(r+9)%colossusStateWords]
+		b2 := state[(r+13)%colossusStateWords]
+		c2 := acc[(r+3)%colossusAccWords]
 
-		dp := uint32(0)
+		dp0 := uint32(0)
+		dp1 := uint32(0)
 		if numPages > 0 {
-			dp = fnv(a^r, b+c) % numPages
-			pageLookup(dp, &page)
+			dp0 = fnv(a^r, b+c) % numPages
+			dp1 = fnv(a2^(r*0x9e3779b9), b2+c2) % numPages
+			if numPages > 1 && dp1 == dp0 {
+				dp1 = (dp1 + 1 + r) % numPages
+			}
+			pageLookup(dp0, &page0)
+			pageLookup(dp1, &page1)
 		} else {
-			for i := range page {
-				page[i] = 0
+			for i := range page0 {
+				page0[i] = 0
+				page1[i] = 0
 			}
 		}
 		sp := fnv(b^r, a+c) % colossusNumTiles
@@ -527,26 +538,34 @@ func colossusHashCoreWithScratchpad(scratchpad []uint32, numPages uint32, sealHa
 		for p := uint32(0); p < colossusInternalPasses; p++ {
 			for i := uint32(0); i < colossusTileWords; i++ {
 				x := tile[i]
-				y := page[(i+p*13)%colossusPageWords]
+				y0 := page0[(i+p*13)%colossusPageWords]
+				y1 := page1[(i*5+p*17+r)%colossusPageWords]
 				sidx := (i + r + p) % colossusStateWords
 				aidx := (i + p) % colossusAccWords
 				z := state[sidx]
 				w := acc[aidx]
 
-				m1 := fnv(x^z, y+r)
-				m2 := colossusRotl32(x+y+w+p, (z^y)%32)
-				m3 := (z * 0x9e3779b1) + (w ^ i)
+				m1 := fnv(x^z, y0+r)
+				m2 := colossusRotl32(x+y1+w+p, (z^y0)%32)
+				m3 := (z * 0x9e3779b1) + (w ^ i) + fnv(y0, y1)
 				newX := m1 ^ m2 ^ m3
 
 				tile[i] = newX
-				state[sidx] = fnv(z^y, newX+i)
-				acc[aidx] = fnv(w^newX, y+r+p)
+				state[sidx] = fnv(z^y0, newX+i) ^ colossusRotl32(y1+w, (r+p+i)&31)
+				acc[aidx] = fnv(w^newX, y1+r+p) ^ (y0 * 0x85ebca6b)
 			}
 		}
 
-		state[r%colossusStateWords] ^= tile[(r*7)%colossusTileWords]
-		state[(r+3)%colossusStateWords] = fnv(state[(r+3)%colossusStateWords], tile[(r*11+5)%colossusTileWords])
-		acc[r%colossusAccWords] ^= tile[(r*13+9)%colossusTileWords]
+		state[r%colossusStateWords] ^= tile[(r*7)%colossusTileWords] ^ page0[(r*3)%colossusPageWords]
+		state[(r+3)%colossusStateWords] = fnv(
+			state[(r+3)%colossusStateWords],
+			tile[(r*11+5)%colossusTileWords]^page1[(r*5+7)%colossusPageWords],
+		)
+		acc[r%colossusAccWords] ^= tile[(r*13+9)%colossusTileWords] ^ page0[(r*7+1)%colossusPageWords]
+		acc[(r+2)%colossusAccWords] = fnv(
+			acc[(r+2)%colossusAccWords],
+			page1[(r*9+3)%colossusPageWords],
+		)
 
 		copy(scratchpad[int(sp)*colossusTileWords:int(sp+1)*colossusTileWords], tile[:])
 	}
