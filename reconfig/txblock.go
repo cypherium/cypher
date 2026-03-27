@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/cypherium/cypher/common"
-	"github.com/cypherium/cypher/consensus/ethash"
+	"github.com/cypherium/cypher/consensus/colossusx"
 	"github.com/cypherium/cypher/core"
 	"github.com/cypherium/cypher/core/state"
 	"github.com/cypherium/cypher/core/types"
