@@ -138,13 +138,43 @@ func (e *GenesisMismatchError) Error() string {
 	return fmt.Sprintf("database contains incompatible genesis (have %x, new %x)", e.Stored, e.New)
 }
 
+func normalizeGenesisChainConfig(config *params.ChainConfig) {
+	if config == nil {
+		return
+	}
+	if config.HomesteadBlock == nil {
+		config.HomesteadBlock = big.NewInt(0)
+	}
+	if config.EIP150Block == nil {
+		config.EIP150Block = big.NewInt(0)
+	}
+	if config.EIP155Block == nil {
+		config.EIP155Block = big.NewInt(0)
+	}
+	if config.EIP158Block == nil {
+		config.EIP158Block = big.NewInt(0)
+	}
+	if config.ByzantiumBlock == nil {
+		config.ByzantiumBlock = big.NewInt(0)
+	}
+	if config.ConstantinopleBlock == nil {
+		config.ConstantinopleBlock = big.NewInt(0)
+	}
+	if config.PetersburgBlock == nil {
+		config.PetersburgBlock = big.NewInt(0)
+	}
+	if config.IstanbulBlock == nil {
+		config.IstanbulBlock = big.NewInt(0)
+	}
+}
+
 // SetupGenesisBlock writes or updates the genesis block in db.
 // The block that will be used is:
 //
-//                          genesis == nil       genesis != nil
-//                       +------------------------------------------
-//     db has no genesis |  main-net default  |  genesis
-//     db has genesis    |  from DB           |  genesis (if compatible)
+//	                     genesis == nil       genesis != nil
+//	                  +------------------------------------------
+//	db has no genesis |  main-net default  |  genesis
+//	db has genesis    |  from DB           |  genesis (if compatible)
 //
 // The stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
@@ -163,6 +193,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 		} else {
 			log.Info("Writing custom genesis block")
 		}
+		normalizeGenesisChainConfig(genesis.Config)
 
 		// Set default transaction size limit if not set in genesis
 		if genesis.Config.TransactionSizeLimit == 0 {
@@ -305,6 +336,7 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	if config == nil {
 		config = params.AllEthashProtocolChanges
 	}
+	normalizeGenesisChainConfig(config)
 	if err := config.CheckConfigForkOrder(); err != nil {
 		return nil, err
 	}
