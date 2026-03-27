@@ -92,6 +92,37 @@ func (ethash *Ethash) SealCandidate(candidate *types.Candidate, stop <-chan stru
 	return result, nil
 }
 
+func (ethash *Ethash) SealKeyHeaderDeterministic(header *types.KeyBlockHeader, startNonce uint64) error {
+	if header == nil || header.Number == nil || header.Difficulty == nil || header.Difficulty.Sign() <= 0 {
+		return errInvalidDifficulty
+	}
+	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
+		header.Nonce = types.EncodeNonce(startNonce)
+		header.MixDigest = common.Hash{}
+		return nil
+	}
+
+	number := header.Number.Uint64()
+	hash := header.SealHash().Bytes()
+	target := new(big.Int).Div(maxUint256, header.Difficulty)
+
+	dataset := ethash.dataset(number)
+	scratchpad := colossusAcquireScratchpad()
+	defer func() {
+		colossusReleaseScratchpad(scratchpad)
+		runtime.KeepAlive(dataset)
+	}()
+
+	for nonce := startNonce; ; nonce++ {
+		digest, result := colossusHashFullWithScratchpad(scratchpad, dataset.dataset, hash, nonce)
+		if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
+			header.Nonce = types.EncodeNonce(nonce)
+			header.MixDigest = common.BytesToHash(digest)
+			return nil
+		}
+	}
+}
+
 // mineCandidate is the actual key-block Colossus proof-of-work miner that
 // searches for a nonce starting from seed that results in correct final block difficulty.
 func (ethash *Ethash) mineCandidate(candidate *types.Candidate, id int, seed uint64, abort chan struct{}, found chan *types.Candidate) {
