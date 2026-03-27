@@ -17,7 +17,7 @@
 
 // Package ethash implements the ethash proof-of-work pow engine.
 
-package ethash
+package colossusx
 
 import (
 	"errors"

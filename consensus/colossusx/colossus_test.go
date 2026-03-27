@@ -1,4 +1,4 @@
-package ethash
+package colossusx
 
 import (
 	"encoding/hex"
