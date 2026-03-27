@@ -307,7 +307,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 		if elapsed > 3*time.Second {
 			logFn = logger.Info
 		}
-		logFn("Generated colossusx verification cache", "elapsed", common.PrettyDuration(elapsed))
+		logFn("Generated colossusx dataset", "elapsed", common.PrettyDuration(elapsed))
 	}()
 
 	// Figure out whether the bytes need to be swapped for the machine
@@ -342,7 +342,11 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 				limit = uint32(size / hashBytes)
 			}
 			// Calculate the dataset segment
-			percent := uint32(size / hashBytes / 100)
+			totalItems := size / hashBytes
+			percent := uint32(totalItems / 100)
+			if percent == 0 {
+				percent = 1
+			}
 			for index := first; index < limit; index++ {
 				item := generateDatasetItem(cache, index, keccak512)
 				if swapped {
@@ -351,7 +355,9 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 				copy(dataset[index*hashBytes:], item)
 
 				if status := atomic.AddUint32(&progress, 1); status%percent == 0 {
-					logger.Info("Generating DAG in progress", "percentage", uint64(status*100)/(size/hashBytes), "elapsed", common.PrettyDuration(time.Since(start)))
+					logger.Info("Generating DAG in progress",
+						"percentage", (uint64(status)*100)/totalItems,
+						"elapsed", common.PrettyDuration(time.Since(start)))
 				}
 			}
 		}(i)
