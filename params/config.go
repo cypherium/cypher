@@ -369,6 +369,19 @@ type ChainConfig struct {
 }
 type GenesisCommittee map[int]common.Cnode
 
+// AllowedFutureBlockTime returns the maximum number of seconds a block timestamp
+// may be ahead of the local clock before it is considered a future block.
+// If a clique-specific value is configured, use that. Otherwise default to 5 minutes.
+func (c *ChainConfig) AllowedFutureBlockTime() uint64 {
+	if c == nil {
+		return 5 * 60
+	}
+	if c.Clique != nil && c.Clique.AllowedFutureBlockTime > 0 {
+		return c.Clique.AllowedFutureBlockTime
+	}
+	return 5 * 60
+}
+
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
 type EthashConfig struct{}
 
