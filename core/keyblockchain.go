@@ -571,7 +571,7 @@ func (kbc *KeyBlockChain) ValidateKeyBlock(block *types.KeyBlock) error {
 	if header.Time <= parent.Time {
 		return fmt.Errorf("invalid keyblock timestamp: parent %d, current %d", parent.Time, header.Time)
 	}
-	if header.Time > uint64(time.Now().Unix())+kbc.chainConfig.AllowedFutureBlockTime {
+	if header.Time > uint64(time.Now().Unix())+kbc.chainConfig.AllowedFutureBlockTime() {
 		return types.ErrFutureBlock
 	}
 	expectedDiff := kbc.engine.CalcKeyBlockDifficulty(kbc, header.Time, parent)
