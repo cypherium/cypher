@@ -333,8 +333,13 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 	if !ok {
 		return nil, fmt.Errorf("consensus engine does not support header seal verification")
 	}
-	if err := sealVerifier.VerifyHeaderSeal(bc.CurrentHeader()); err != nil {
-		return nil, err
+	currentHeader := bc.CurrentHeader()
+	if currentHeader.Number != nil && currentHeader.Number.Uint64() == 0 {
+		log.Info("Skipping genesis tx block seal self-check", "hash", currentHeader.Hash())
+	} else {
+		if err := sealVerifier.VerifyHeaderSeal(currentHeader); err != nil {
+			return nil, err
+		}
 	}
 
 	// Check the current state of the block hashes and make sure that we do not have any of the bad blocks in our chain
